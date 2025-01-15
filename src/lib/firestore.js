@@ -1,5 +1,3 @@
-// src/lib/firestore.js
-
 import { db } from "@/firebase.config";
 import { collection, doc, setDoc } from "firebase/firestore";
 

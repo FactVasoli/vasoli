@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { registerUser } from "@/lib/auth"; // Función de registro personalizada
+import { registerUser } from "@/lib/auth";
+import NavBar from "@/components/NavBar";
+import Link from "next/link";
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
@@ -20,50 +22,52 @@ export default function RegisterPage() {
     try {
       await registerUser(email, password, username);
       setSuccess("Usuario registrado exitosamente.");
-      setTimeout(() => router.push("/login"), 2000); // Redirigir a login
+      setTimeout(() => router.push("/login"), 2000);
     } catch (error) {
       setError(error.message);
     }
   };
 
   return (
-    <div style={styles.container}>
-      <h1>Registro</h1>
-      <form onSubmit={handleRegister} style={styles.form}>
-        {error && <p style={styles.error}>{error}</p>}
-        {success && <p style={styles.success}>{success}</p>}
-        <input
-          type="text"
-          placeholder="Nombre de Usuario"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          style={styles.input}
-        />
-        <input
-          type="email"
-          placeholder="Correo Electrónico"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          style={styles.input}
-        />
-        <input
-          type="password"
-          placeholder="Contraseña"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          style={styles.input}
-        />
-        <button type="submit" style={styles.button}>Registrar</button>
-      </form>
+    <div>
+      <NavBar />
+      <div className="container">
+        <h1>Registro</h1>
+        <form onSubmit={handleRegister} className="form">
+          {error && <p className="error">{error}</p>}
+          {success && <p className="success">{success}</p>}
+          <input
+            type="text"
+            placeholder="Nombre de Usuario"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="input"
+            required
+          />
+          <input
+            type="email"
+            placeholder="Correo Electrónico"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="input"
+            required
+          />
+          <input
+            type="password"
+            placeholder="Contraseña"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="input"
+            required
+          />
+          <button type="submit" className="button">
+            Registrar
+          </button>
+        </form>
+        <p className="mt-4">
+          ¿Ya tienes una cuenta? <Link href="/login" className="text-primary hover:underline">Inicia sesión aquí</Link>
+        </p>
+      </div>
     </div>
   );
 }
-
-const styles = {
-  container: { maxWidth: "400px", margin: "0 auto", padding: "20px", textAlign: "center" },
-  form: { display: "flex", flexDirection: "column", gap: "10px" },
-  input: { padding: "10px", fontSize: "16px", borderRadius: "5px", border: "1px solid #ccc" },
-  button: { padding: "10px", fontSize: "16px", color: "#fff", backgroundColor: "#007bff", border: "none", borderRadius: "5px", cursor: "pointer" },
-  error: { color: "red" },
-  success: { color: "green" },
-};
