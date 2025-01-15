@@ -1,35 +1,59 @@
 // src/lib/firestore.js
 
-import { db } from "@/firebase.config"; // Asegúrate de que db esté exportado correctamente desde firebase.config.js
-import { collection, getDocs, setDoc, doc } from "firebase/firestore"; // Asegúrate de importar getDocs
+import { db } from "@/firebase.config";
+import { collection, doc, setDoc } from "firebase/firestore";
 
-// Función para inicializar la base de datos
+// Estructura simulada en Firestore
 export const initializeDatabase = async () => {
-  const colecciones = [
-    "Sitio", 
-    "Cliente", 
-    "Categoría", 
-    "EstadoOC", 
-    "Facturas", 
-    "Gestor", 
-    "EstadoGestion", 
-    "Honorarios", 
-    "Región", 
-    "OC", 
-    "Usuario", 
-    "TipoUsuario"
-  ];
+  const data = {
+    Sitio: {
+      default: { codigo: "CL-XXX-0000", nombre: "Sitio Ejemplo", region: "1" },
+    },
+    Cliente: {
+      default: { nombre: "ATP" },
+    },
+    Categoría: {
+      default: { nombre: "Sitios nuevos" },
+    },
+    EstadoOC: {
+      default: { estado: "Pendiente" },
+    },
+    Facturas: {
+      default: { numero: 1001, fecha: "2023-01-01", valorUF: 30.5 },
+    },
+    Gestor: {
+      default: { nombre: "Gestor Ejemplo" },
+    },
+    EstadoGestion: {
+      default: { estado: "Búsqueda" },
+    },
+    Honorarios: {
+      default: { numero: 100, fecha: "2023-01-01" },
+    },
+    Región: {
+      default: { numero: "I", nombre: "Región Ejemplo" },
+    },
+    OC: {
+      default: {
+        idSitio: "default",
+        idCliente: "default",
+        idCategoria: "default",
+        estadoOC: "default",
+        descripcionOC: "Descripción de ejemplo",
+      },
+    },
+    Usuario: {
+      default: { username: "admin", password: "hashed-password", tipoUsuario: 1 },
+    },
+    TipoUsuario: {
+      default: { tipo: "Admin" },
+    },
+  };
 
-  // Verificar si ya existen las colecciones en la base de datos
-  for (const coleccion of colecciones) {
-    const colRef = collection(db, coleccion); // Asegúrate de pasar db como primer argumento
-    const snapshot = await getDocs(colRef); // Verificar si la colección está vacía
-
-    if (snapshot.empty) {
-      // Si la colección está vacía o no existe, la creamos con un documento de ejemplo
-      await setDoc(doc(db, coleccion, "defaultDoc"), {
-        nombre: `${coleccion} ejemplo`,
-      });
+  for (const [collectionName, documents] of Object.entries(data)) {
+    const colRef = collection(db, collectionName);
+    for (const [docId, docData] of Object.entries(documents)) {
+      await setDoc(doc(colRef, docId), docData);
     }
   }
 };

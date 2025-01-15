@@ -2,25 +2,21 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { registerUser } from "@/lib/auth"; // Función de registro personalizada
+import { loginUser } from "@/lib/auth";
 
-export default function RegisterPage() {
+export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [username, setUsername] = useState("");
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const router = useRouter();
 
-  const handleRegister = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
-    setSuccess("");
 
     try {
-      await registerUser(email, password, username);
-      setSuccess("Usuario registrado exitosamente.");
-      setTimeout(() => router.push("/login"), 2000); // Redirigir a login
+      await loginUser(email, password);
+      router.push("/home"); // Redirigir al dashboard
     } catch (error) {
       setError(error.message);
     }
@@ -28,17 +24,9 @@ export default function RegisterPage() {
 
   return (
     <div style={styles.container}>
-      <h1>Registro</h1>
-      <form onSubmit={handleRegister} style={styles.form}>
+      <h1>Inicio de Sesión</h1>
+      <form onSubmit={handleLogin} style={styles.form}>
         {error && <p style={styles.error}>{error}</p>}
-        {success && <p style={styles.success}>{success}</p>}
-        <input
-          type="text"
-          placeholder="Nombre de Usuario"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          style={styles.input}
-        />
         <input
           type="email"
           placeholder="Correo Electrónico"
@@ -53,12 +41,11 @@ export default function RegisterPage() {
           onChange={(e) => setPassword(e.target.value)}
           style={styles.input}
         />
-        <button type="submit" style={styles.button}>Registrar</button>
+        <button type="submit" style={styles.button}>Iniciar Sesión</button>
       </form>
     </div>
   );
 }
-
 const styles = {
   container: { maxWidth: "400px", margin: "0 auto", padding: "20px", textAlign: "center" },
   form: { display: "flex", flexDirection: "column", gap: "10px" },

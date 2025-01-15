@@ -7,13 +7,11 @@ export default function NavBar() {
     <nav style={styles.navBar}>
       <div style={styles.brand}>Mi Aplicación</div>
       <div style={styles.navLinks}>
-        <Link href="/login" style={styles.link}>
-          Login
-        </Link>
-        <Link href="/register" style={styles.link}>
-          Register
-        </Link>
+        <Link href="/login" style={styles.link}>Login</Link>
+        <Link href="/register" style={styles.link}>Register</Link>
+        <Link href="/logout" style={styles.link}>Logout</Link>
       </div>
+
     </nav>
   );
 }
