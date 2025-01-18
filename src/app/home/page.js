@@ -2,28 +2,31 @@
 
 import { useEffect, useState } from "react";
 import NavBar from "@/components/NavBar";
+import { auth } from "@/firebase.config";
+import { getUserData } from "@/lib/auth";
 
 export default function Home() {
-  const [username, setUsername] = useState("");
+  const [userData, setUserData] = useState(null);
 
   useEffect(() => {
-    const checkUsername = () => {
-      const storedUsername = localStorage.getItem('username');
-      setUsername(storedUsername || "");
+    const loadUserData = async () => {
+      if (auth.currentUser) {
+        const data = await getUserData(auth.currentUser.uid);
+        setUserData(data);
+      }
     };
 
-    checkUsername();
-    window.addEventListener('storage', checkUsername);
-
-    return () => window.removeEventListener('storage', checkUsername);
+    loadUserData();
   }, []);
 
   return (
     <div>
-      <NavBar username={username} />
+      <NavBar username={userData?.username} />
       <div className="container">
-        <h1 className="text-2xl font-bold mb-4">Página de Inicio</h1>
-        <p className="mb-4">¡Bienvenido! La base de datos se ha inicializado correctamente.</p>
+        <h1 className="text-2xl font-bold mb-4">
+          ¡Bienvenido{userData ? `, ${userData.nombre} ${userData.apellido}` : ''}!
+        </h1>
+        <p className="mb-4">La base de datos se ha inicializado correctamente.</p>
       </div>
     </div>
   );

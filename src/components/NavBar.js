@@ -40,7 +40,9 @@ export default function NavBar({ username }) {
             </button>
             {showDropdown && (
               <div className="dropdown">
-                <button className="dropdown-item">Mi perfil</button>
+                <Link href="/profile" className="dropdown-item">
+                  Mi perfil
+                </Link>
                 <button onClick={handleLogout} className="dropdown-item">
                   Cerrar sesión
                 </button>

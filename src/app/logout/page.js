@@ -15,7 +15,7 @@ export default function LogoutPage() {
       await logoutUser();
       
       timer = setInterval(() => {
-        setCountdown((prev) => prev - 0.5);
+        setCountdown((prev) => prev - 1);
       }, 1000);
     };
 
