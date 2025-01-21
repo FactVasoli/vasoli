@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/firebase.config";
 import NavBar from "@/components/NavBar";
+import { useRouter } from "next/navigation";
+import { auth } from "@/firebase.config"; 
 
 export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState([]);
@@ -12,6 +14,17 @@ export default function UsuariosPage() {
     estadoUsuario: "",
     cargo: ""
   });
+  const router = useRouter();
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (!user) {
+        router.push("/login"); // Redirigir a la página de inicio de sesión si no está autenticado
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
 
   const cargarUsuarios = async () => {
     const querySnapshot = await getDocs(collection(db, "Usuarios"));

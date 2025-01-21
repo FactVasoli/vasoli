@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { collection, addDoc, getDocs, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/firebase.config";
 import NavBar from "@/components/NavBar";
+import { auth } from "@/firebase.config";
 
 export default function ClientesPage() {
   const [clientes, setClientes] = useState([]);
@@ -11,6 +13,17 @@ export default function ClientesPage() {
   const [mostrarEliminados, setMostrarEliminados] = useState(false);
   const [editandoCliente, setEditandoCliente] = useState(null);
   const [editNombre, setEditNombre] = useState("");
+  const router = useRouter();
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (!user) {
+        router.push("/login"); // Redirigir a la página de inicio de sesión si no está autenticado
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
 
   const cargarClientes = async () => {
     const querySnapshot = await getDocs(collection(db, "Clientes"));

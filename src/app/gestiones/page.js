@@ -7,6 +7,8 @@ import NavBar from "@/components/NavBar";
 import Select from 'react-select';
 import AddSitioModal from "@/components/AddSitioModal";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { auth } from "@/firebase.config";
 
 const cargarGestiones = async (setGestiones) => {
   const querySnapshot = await getDocs(collection(db, "Gestiones"));
@@ -55,6 +57,17 @@ export default function GestionesPage() {
   });
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (!user) {
+        router.push("/login"); // Redirigir a la página de inicio de sesión si no está autenticado
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
 
   useEffect(() => {
     const cargarClientes = async () => {

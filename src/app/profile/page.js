@@ -14,6 +14,16 @@ export default function ProfilePage() {
   const router = useRouter();
 
   useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (!user) {
+        router.push("/login"); // Redirigir a la página de inicio de sesión si no está autenticado
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+
+  useEffect(() => {
     const loadUserData = async () => {
       if (auth.currentUser) {
         const data = await getUserData(auth.currentUser.uid);

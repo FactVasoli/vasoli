@@ -1,11 +1,24 @@
 "use client";
 
-// import { useState } from "react";
-// import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import NavBar from "@/components/NavBar";
 import Link from "next/link";
+import { auth } from "@/firebase.config";
 
 export default function AdministracionPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (!user) {
+        router.push("/login"); // Redirigir a la página de inicio de sesión si no está autenticado
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+  
   return (
     <div>
       <NavBar />

@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { collection, query, where, getDocs, addDoc, updateDoc, doc } from "firebase/firestore";
-import { db } from "@/firebase.config";
+import { db, auth } from "@/firebase.config";
 import NavBar from "@/components/NavBar";
 import { REGIONES_CHILE } from "@/types/sitio";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function SitiosPage() {
   const [sitios, setSitios] = useState([]);
@@ -26,6 +27,17 @@ export default function SitiosPage() {
   const [editMode, setEditMode] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  const router = useRouter();
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (!user) {
+        router.push("/login");
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
 
   const cargarSitios = useCallback(async () => {
     let q = query(collection(db, "Sitios"));
