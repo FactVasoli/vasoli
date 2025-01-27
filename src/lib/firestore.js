@@ -7,7 +7,7 @@ export const initializeDatabase = async () => {
     Sitios: {},
     Clientes: {},
     Facturas: {},
-    Gestor: {},
+    Gestores: {},
     Honorarios: {},
     Gestiones: {},
     Usuarios: {},

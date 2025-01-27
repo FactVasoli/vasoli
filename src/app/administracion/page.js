@@ -1,24 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import useAuthAdmin from "@/hooks/useAuthAdmin";
 import NavBar from "@/components/NavBar";
 import Link from "next/link";
-import { auth } from "@/firebase.config";
 
 export default function AdministracionPage() {
-  const router = useRouter();
+  useAuthAdmin();
 
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (!user) {
-        router.push("/login"); // Redirigir a la página de inicio de sesión si no está autenticado
-      }
-    });
-
-    return () => unsubscribe();
-  }, [router]);
-  
   return (
     <div>
       <NavBar />
@@ -28,7 +16,7 @@ export default function AdministracionPage() {
         <div className="grid md:grid-cols-2 gap-6">
           {/* Gestión de Usuarios */}
           <div className="bg-gray-800 p-6 rounded-lg">
-            <h2 className="text-xl font-semibold text-white mb-4">Gestión de Usuarios</h2>
+            <h2 className="text-xl font-semibold text-white mb-4">Usuarios</h2>
             <p className="text-gray-300 mb-4">
               Administra los usuarios del sistema, sus estados y cargos.
             </p>
@@ -42,7 +30,7 @@ export default function AdministracionPage() {
 
           {/* Gestión de Clientes */}
           <div className="bg-gray-800 p-6 rounded-lg">
-            <h2 className="text-xl font-semibold text-white mb-4">Gestión de Clientes</h2>
+            <h2 className="text-xl font-semibold text-white mb-4">Clientes</h2>
             <p className="text-gray-300 mb-4">
               Administra el registro de clientes del sistema.
             </p>
@@ -51,6 +39,20 @@ export default function AdministracionPage() {
               className="inline-block px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             >
               Gestionar Clientes
+            </Link>
+          </div>
+
+          {/* Gestión de Gestores */}
+          <div className="bg-gray-800 p-6 rounded-lg">
+            <h2 className="text-xl font-semibold text-white mb-4">Gestores</h2>
+            <p className="text-gray-300 mb-4">
+              Administra los gestores de la empresa.
+            </p>
+            <Link 
+              href="/administracion/gestores" 
+              className="inline-block px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Gestionar Gestores
             </Link>
           </div>
         </div>

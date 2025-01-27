@@ -46,7 +46,8 @@ export default function GestionesPage() {
     estadoOC: "",
     estadoGestion: "",
     fechaAsignacion: "",
-    descripcionOC: ""
+    descripcionOC: "",
+    valorNetoUF: ""
   });
   const [filtros, setFiltros] = useState({
     busqueda: "",
@@ -113,7 +114,8 @@ export default function GestionesPage() {
       estadoOC: "",
       estadoGestion: "",
       fechaAsignacion: "",
-      descripcionOC: ""
+      descripcionOC: "",
+      valorNetoUF: ""
     });
 
     cargarGestiones(setGestiones);
@@ -273,6 +275,13 @@ export default function GestionesPage() {
               >
                 Agregar sitio nuevo
               </button>
+              <input
+                type="text"
+                placeholder="Valor Neto UF"
+                value={formData.valorNetoUF}
+                onChange={(e) => setFormData({ ...formData, valorNetoUF: e.target.value })}
+                className="input w-full"
+              />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <select
@@ -295,7 +304,7 @@ export default function GestionesPage() {
                 required
               >
                 <option value="">Seleccione Estado Gestión *</option>
-                {["Búsqueda", "Negociación", "Aprobado CP y ATP", "Carpeta legal", "Fiscalía", "Firmado CP y ATP", "Terminado sin facturar", "Armado expediente", "Ingreso DOM", "Seguimiento DOM", "Rechazo DOM", "Re-Ingreso DOM", "Permiso"].map(estado => (
+                {["Búsqueda", "Negociación", "Aprobado CP y ATP", "Carpeta legal", "Fiscalía", "Firmado CP y ATP", "Terminado sin facturar", "Armado expediente", "Ingreso DOM", "Seguimiento DOM", "Rechazo DOM", "Re-Ingreso DOM", "Permiso", "Eliminado", "Facturado"].map(estado => (
                   <option key={estado} value={estado}>
                     {estado}
                   </option>
@@ -414,7 +423,7 @@ export default function GestionesPage() {
                   <th className="px-4 py-2">Categoría</th>
                   <th className="px-4 py-2">Estado OC</th>
                   <th className="px-4 py-2">Estado Gestión</th>
-                  <th className="px-4 py-2">Fecha Asignación</th>
+                  <th className="px-4 py-2">Valor neto UF</th>
                 </tr>
               </thead>
               <tbody>
@@ -427,7 +436,7 @@ export default function GestionesPage() {
                     <td className="px-4 py-2">{gestion.categoria}</td>
                     <td className="px-4 py-2">{gestion.estadoOC}</td>
                     <td className="px-4 py-2">{gestion.estadoGestion}</td>
-                    <td className="px-4 py-2">{gestion.fechaAsignacion}</td>
+                    <td className="px-4 py-2">{gestion.valorNetoUF}</td>
                   </tr>
                 ))}
               </tbody>

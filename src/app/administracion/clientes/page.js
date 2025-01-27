@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { collection, addDoc, getDocs, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/firebase.config";
 import NavBar from "@/components/NavBar";
-import { auth } from "@/firebase.config";
+import useAuthAdmin from "@/hooks/useAuthAdmin";
 
 export default function ClientesPage() {
   const [clientes, setClientes] = useState([]);
@@ -15,15 +15,7 @@ export default function ClientesPage() {
   const [editNombre, setEditNombre] = useState("");
   const router = useRouter();
 
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (!user) {
-        router.push("/login"); // Redirigir a la página de inicio de sesión si no está autenticado
-      }
-    });
-
-    return () => unsubscribe();
-  }, [router]);
+  useAuthAdmin();
 
   const cargarClientes = async () => {
     const querySnapshot = await getDocs(collection(db, "Clientes"));
@@ -81,7 +73,12 @@ export default function ClientesPage() {
       <div className="w-full px-4 py-8 flex">
         {/* Contenedor de ingreso de datos */}
         <div className="w-1/2 pr-4">
-          <h1 className="text-2xl font-bold mb-6">Gestión de Clientes</h1>
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold mb-6">Clientes</h1>
+            <button onClick={() => router.push("/administracion")} className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors">
+              Volver
+            </button>
+          </div>
           <div className="bg-gray-800 p-6 rounded-lg mb-8">
             <h2 className="text-xl font-semibold text-white mb-4">Agregar Nuevo Cliente</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
