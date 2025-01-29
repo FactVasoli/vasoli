@@ -121,24 +121,6 @@ export default function NavBar() {
               )}
             </div>
 
-            <div className="relative"
-              onMouseEnter={() => handleMouseEnter('ingresar')}
-              onMouseLeave={() => handleMouseLeave('ingresar')}
-            >
-              <button className="nav-link" onClick={() => handleClick('ingresar')}>
-                Ingresar
-              </button>
-              {showDropdown.ingresar && (
-                <div className="dropdown transition-all duration-300 ease-in-out">
-                  <Link href="/sitios" className="dropdown-item">Sitios</Link>
-                  <Link href="/gestiones" className="dropdown-item">Gestiones</Link>
-                  {userData.cargo === "admin" && (
-                    <Link href="/facturas" className="dropdown-item">Facturas</Link>
-                  )}
-                </div>
-              )}
-            </div>
-
             {userData.cargo === "admin" && (
               <div className="relative"
                 onMouseEnter={() => handleMouseEnter('administracion')}

@@ -108,7 +108,16 @@ export default function EditGestionModal({ isOpen, onClose, gestion, onSave, tip
         region: gestion.region || "",
       });
     }
-  }, [isOpen, gestion]);
+
+    const handleEsc = (event) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [isOpen, gestion, onClose]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -135,6 +144,8 @@ export default function EditGestionModal({ isOpen, onClose, gestion, onSave, tip
     setNewObservation({ date: "", observation: "" });
   };
 
+  const isDisabled = (formData.estadoOC === "Terminado" || formData.estadoOC === "Eliminado y cobrado") && formData.estadoGestion === "Facturado" && !isAdmin;
+
   if (!isOpen) return null;
 
   return (
@@ -157,9 +168,10 @@ export default function EditGestionModal({ isOpen, onClose, gestion, onSave, tip
                 value={formData.numeroOC}
                 onChange={(e) => setFormData({ ...formData, numeroOC: e.target.value })}
                 className="input w-full"
+                disabled={isDisabled}
               />
             </div>
-            <div className="grid grid-cols-2 gap-40">
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-white text-sm mb-1">Cliente</label>
                 <input
@@ -180,6 +192,7 @@ export default function EditGestionModal({ isOpen, onClose, gestion, onSave, tip
                 onChange={(e) => setFormData({ ...formData, fechaAsignacion: e.target.value })}
                 className="input w-full"
                 required
+                disabled={isDisabled}
               />
             </div>
             <div>
@@ -189,6 +202,7 @@ export default function EditGestionModal({ isOpen, onClose, gestion, onSave, tip
                 onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
                 className="input w-full"
                 required
+                disabled={isDisabled}
               >
                 <option value="">Seleccione Categoría</option>
                 {[
@@ -219,7 +233,7 @@ export default function EditGestionModal({ isOpen, onClose, gestion, onSave, tip
                 value={formData.codigoSitio}
                 onChange={(e) => setFormData({ ...formData, codigoSitio: e.target.value })}
                 className="input w-full"
-                required
+                disabled={isDisabled}
               />
             </div>
             <div>
@@ -228,7 +242,7 @@ export default function EditGestionModal({ isOpen, onClose, gestion, onSave, tip
                 value={formData.region}
                 onChange={(e) => setFormData({ ...formData, region: e.target.value })}
                 className="input w-full"
-                required
+                disabled={isDisabled}
               >
                 <option value="">Seleccione Región</option>
                 {REGIONES_CHILE.map((region) => (
@@ -245,7 +259,7 @@ export default function EditGestionModal({ isOpen, onClose, gestion, onSave, tip
                 value={formData.nombreSitio}
                 onChange={(e) => setFormData({ ...formData, nombreSitio: e.target.value })}
                 className="input w-full"
-                required
+                disabled={isDisabled}
               />
             </div>
           </div>
@@ -258,6 +272,7 @@ export default function EditGestionModal({ isOpen, onClose, gestion, onSave, tip
                 onChange={(e) => setFormData({ ...formData, estadoOC: e.target.value })}
                 className="input w-full"
                 required
+                disabled={isDisabled}
               >
                 <option value="">Seleccione Estado OC</option>
                 {estadosOC.map((estado) => (
@@ -274,6 +289,7 @@ export default function EditGestionModal({ isOpen, onClose, gestion, onSave, tip
                 onChange={(e) => setFormData({ ...formData, estadoGestion: e.target.value })}
                 className="input w-full"
                 required
+                disabled={isDisabled}
               >
                 <option value="">Seleccione Estado Gestión</option>
                 {estadosGestion.map((estado) => (
@@ -293,7 +309,7 @@ export default function EditGestionModal({ isOpen, onClose, gestion, onSave, tip
                   onChange={(e) => setFormData({ ...formData, valorNetoUF: e.target.value })}
                   className="input w-full"
                   step="0.01"
-                  required
+                  disabled={isDisabled}
                 />
               </div>
             )}
@@ -321,6 +337,7 @@ export default function EditGestionModal({ isOpen, onClose, gestion, onSave, tip
                     setNewObservation((prev) => ({ ...prev, date: e.target.value }))
                   }
                   className="input w-full"
+                  disabled={isDisabled}
                 />
               </div>
               <div className="col-span-2">
@@ -332,6 +349,7 @@ export default function EditGestionModal({ isOpen, onClose, gestion, onSave, tip
                     setNewObservation((prev) => ({ ...prev, observation: e.target.value }))
                   }
                   className="input w-full"
+                  disabled={isDisabled}
                 />
               </div>
               <div className="col-span-2">
@@ -339,6 +357,7 @@ export default function EditGestionModal({ isOpen, onClose, gestion, onSave, tip
                   type="button"
                   onClick={handleAddObservation}
                   className="button w-full"
+                  disabled={isDisabled}
                 >
                   Agregar Observación
                 </button>
@@ -353,13 +372,27 @@ export default function EditGestionModal({ isOpen, onClose, gestion, onSave, tip
                 value={formData.descripcionOC}
                 onChange={(e) => setFormData({ ...formData, descripcionOC: e.target.value })}
                 className="input w-full h-32"
+                disabled={isDisabled}
               />
             </div>
           </div>
 
-          <button type="submit" className="button w-full">
-            Guardar Cambios
-          </button>
+          <div className="flex justify-end space-x-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="button bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="button bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+              disabled={isDisabled}
+            >
+              Guardar cambios
+            </button>
+          </div>
         </form>
       </div>
     </div>

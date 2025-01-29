@@ -40,7 +40,7 @@ export default function RegisterPage() {
       await registerUser(email, password, username, nombre, apellido);
       setSuccess("Usuario registrado exitosamente.");
       // Redirigir a la página de registro pendiente sin iniciar sesión
-      router.push("/registro-pendiente");
+      router.push("/registro/pendiente");
     } catch (error) {
       setError(error.message);
     }

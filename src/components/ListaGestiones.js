@@ -1,16 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import EditGestionModal from "./EditGestionModal";
-import { updateDoc, doc } from "firebase/firestore";
-import { db } from "@/firebase.config";
+import { updateDoc, doc, getDoc } from "firebase/firestore";
+import { db, auth } from "@/firebase.config";
 import FacturarModal from "./FacturarModal";
+import AddObservacion from "./AddObservacion";
 
 export default function ListaGestiones({ titulo, gestiones }) {
   const [sortConfig, setSortConfig] = useState({ key: 'fechaAsignacion', direction: 'asc' });
   const [isEditModalOpen, setEditModalOpen] = useState(false);
   const [selectedGestion, setSelectedGestion] = useState(null);
   const [isFacturarModalOpen, setFacturarModalOpen] = useState(false);
+  const [isAddObservacionModalOpen, setAddObservacionModalOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const formatDate = (dateString) => {
     const [year, month, day] = dateString.split("-");
@@ -99,6 +102,26 @@ export default function ListaGestiones({ titulo, gestiones }) {
     }
   };
 
+  const handleAddObservacionClick = (gestion) => {
+    setSelectedGestion(gestion);
+    setAddObservacionModalOpen(true);
+  };
+
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      const user = auth.currentUser;
+      if (user) {
+        const userDoc = await getDoc(doc(db, "Usuarios", user.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setIsAdmin(userData.cargo === "admin");
+        }
+      }
+    };
+
+    fetchUserRole();
+  }, []);
+
   return (
     <div className="bg-gray-800 p-6 rounded-lg mb-8">
       <h2 className="text-xl font-semibold text-white mb-4">{titulo}</h2>
@@ -144,6 +167,11 @@ export default function ListaGestiones({ titulo, gestiones }) {
                 </span>
               </th>
               <th className="px-4 py-2 border border-gray-600" style={{ width: '440px' }}>Observaciones</th>
+              {isAdmin && (
+                <th className="px-4 py-2 border border-gray-600" style={{ width: '100px' }}>
+                  UF Neto
+                </th>
+              )}
               <th className="px-4 py-2 border border-gray-600" style={{ width: '50px' }}>Acciones</th>
             </tr>
           </thead>
@@ -158,10 +186,21 @@ export default function ListaGestiones({ titulo, gestiones }) {
                 <td className="px-4 py-2 border border-gray-600">{gestion.region}</td>
                 <td className="px-4 py-2 border border-gray-600">{gestion.estadoGestion}</td>
                 <td className="px-4 py-2 border border-gray-600">
-                  <div className="h-25 overflow-y-auto">
-                    {gestion.observaciones}
+                  <div className="h-[75px] overflow-y-hidden" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAddObservacionClick(gestion);
+                      }}
+                      className="text-white-500 hover:text-yellow-300"
+                    >
+                      {gestion.observaciones}
+                    </button>
                   </div>
                 </td>
+                {isAdmin && (
+                  <td className="px-4 py-2 border border-gray-600">{gestion.valorNetoUF}</td>
+                )}
                 <td className="px-4 py-2 border border-gray-600">
                   {titulo === "Gestiones en Trámite" && (
                     <div>
@@ -278,6 +317,15 @@ export default function ListaGestiones({ titulo, gestiones }) {
         isOpen={isFacturarModalOpen}
         onClose={() => setFacturarModalOpen(false)}
         gestion={selectedGestion}
+      />
+      <AddObservacion
+        isOpen={isAddObservacionModalOpen}
+        onClose={() => setAddObservacionModalOpen(false)}
+        gestion={selectedGestion}
+        onSave={() => {
+          setAddObservacionModalOpen(false);
+          // Aquí puedes agregar lógica para refrescar la lista si es necesario
+        }}
       />
     </div>
   );
