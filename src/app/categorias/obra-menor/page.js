@@ -61,19 +61,26 @@ export default function SitiosNuevosPage() {
   const gestionesEnTramite = gestiones.filter(gestion => gestion.estadoOC === "Gestión en trámite" && gestion.categoria === categoriaInicial);
   const gestionesDelayed = gestiones.filter(gestion => gestion.estadoOC === "Delayed" && gestion.categoria === categoriaInicial);
   const gestionesFacturado = gestiones.filter(gestion => 
-    (gestion.estadoOC === "Terminado sin facturar" || gestion.estadoOC === "Facturado no pagado") && 
+    (gestion.estadoOC === "Terminado sin facturar" || 
+     gestion.estadoOC === "Facturado no pagado" || 
+     (gestion.estadoOC === "Eliminado no facturado" && gestion.estadoGestion === "Facturado")) && 
     gestion.categoria === categoriaInicial
   );
-  const gestionesEliminados = gestiones.filter(gestion => gestion.estadoOC === "Eliminado no facturado" && gestion.categoria === categoriaInicial);
+  const gestionesEliminados = gestiones.filter(gestion => 
+    gestion.estadoOC === "Eliminado no facturado" && 
+    gestion.estadoGestion === "Eliminado" && 
+    gestion.categoria === categoriaInicial
+  );
   const gestionesTerminados = gestiones.filter(gestion => 
     (gestion.estadoOC === "Terminado" || gestion.estadoOC === "Eliminado y cobrado") && 
     gestion.categoria === categoriaInicial
   );
-
+  
   return (
     <div>
       <NavBar />
       <div className="w-full px-4 py-8">
+        <h1>{categoriaInicial}</h1>
         <button
           onClick={() => setShowAgregarGestion(true)}
           className="px-4 py-2 bg-blue-600 text-white rounded-md w-full hover:bg-blue-700 transition-colors"

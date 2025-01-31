@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import EditGestionModal from "./EditGestionModal";
-import { updateDoc, doc, getDoc } from "firebase/firestore";
+import { updateDoc, doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db, auth } from "@/firebase.config";
 import FacturarModal from "./FacturarModal";
 import AddObservacion from "./AddObservacion";
+import ViewFacturas from './ViewFacturas';
 
 export default function ListaGestiones({ titulo, gestiones }) {
   const [sortConfig, setSortConfig] = useState({ key: 'fechaAsignacion', direction: 'asc' });
@@ -14,6 +15,21 @@ export default function ListaGestiones({ titulo, gestiones }) {
   const [isFacturarModalOpen, setFacturarModalOpen] = useState(false);
   const [isAddObservacionModalOpen, setAddObservacionModalOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [totalUFNeto, setTotalUFNeto] = useState(0);
+  const [totalCLP, setTotalCLP] = useState(0);
+  const [totalCLPTramites, setTotalCLPTramites] = useState(0);
+  const [totalUFNetoFacts, setTotalUFNetoFacts] = useState(0);
+  const [totalCLPFacts, setTotalCLPFacts] = useState(0);
+  const [totalGestionesSinFacturar, setTotalGestionesSinFacturar] = useState(0);
+  const [totalGestionesFacturadas, setTotalGestionesFacturadas] = useState(0);
+  const [totalCLPEliminados, setTotalCLPEliminados] = useState(0);
+  const [valorUF, setValorUF] = useState(0);
+  const [viewFacturasOpen, setViewFacturasOpen] = useState(false);
+  const [facturas, setFacturas] = useState([]);
+  const [totalUFNetoTerminadosCobrados, setTotalUFNetoTerminadosCobrados] = useState(0);
+  const [totalCLPTerminadosCobrados, setTotalCLPTerminadosCobrados] = useState(0);
+  const [totalUFNetoEliminadosCobrados, setTotalUFNetoEliminadosCobrados] = useState(0);
+  const [totalCLPEliminadosCobrados, setTotalCLPEliminadosCobrados] = useState(0);
 
   const formatDate = (dateString) => {
     const [year, month, day] = dateString.split("-");
@@ -45,7 +61,9 @@ export default function ListaGestiones({ titulo, gestiones }) {
     if (confirm("¿Deseas retomar la gestión de este sitio? Se moverá a la lista 'Gestiones en Trámite'")) {
       const gestionRef = doc(db, "Gestiones", gestion.id);
       await updateDoc(gestionRef, {
-        estadoOC: "Gestión en trámite"
+        estadoOC: "Gestión en trámite",
+        fechaEliminacion: null,
+        totalCLPEliminado: null,
       });
     }
   };
@@ -72,10 +90,28 @@ export default function ListaGestiones({ titulo, gestiones }) {
   const handleEliminar = async (gestion) => {
     if (confirm("¿Deseas eliminar esta gestión? Se moverá a la lista 'Eliminados sin cobrar'")) {
       const gestionRef = doc(db, "Gestiones", gestion.id);
-      await updateDoc(gestionRef, {
-        estadoOC: "Eliminado no facturado",
-        estadoGestion: "Eliminado"
-      });
+      const today = new Date();
+      const formattedDate = today.toLocaleDateString('es-CL').split('/').reverse().join('-'); // Formato dd-mm-yyyy
+
+      // Obtener el valor de la UF en la fecha de eliminación
+      const response = await fetch(`https://mindicador.cl/api/uf/${formattedDate}`);
+      const data = await response.json();
+
+      // Verificar si hay datos en la serie
+      if (data.serie && data.serie.length > 0) {
+        const valorUFEliminacion = data.serie[0].valor;
+
+        const totalCLPEliminado = (parseFloat(gestion.valorNetoUF) * 1.19) * valorUFEliminacion;
+
+        await updateDoc(gestionRef, {
+          estadoOC: "Eliminado no facturado",
+          estadoGestion: "Eliminado",
+          fechaEliminacion: formattedDate,
+          totalCLPEliminado: totalCLPEliminado,
+        });
+      } else {
+        alert("No se pudo obtener el valor de la UF para la fecha seleccionada.");
+      }
     }
   };
 
@@ -102,10 +138,105 @@ export default function ListaGestiones({ titulo, gestiones }) {
     }
   };
 
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat("es-CL", {
+      style: "currency",
+      currency: "CLP",
+    }).format(value);
+  };
+
   const handleAddObservacionClick = (gestion) => {
     setSelectedGestion(gestion);
     setAddObservacionModalOpen(true);
   };
+
+  const handleVerFactura = async (gestion) => {
+    const facturasRef = collection(db, "Facturas");
+    const q = query(facturasRef, where("codigoSitio", "==", gestion.codigoSitio), where("ordenCompra", "==", gestion.numeroOC));
+    const querySnapshot = await getDocs(q);
+    
+    const facturas = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    setFacturas(facturas);
+    setViewFacturasOpen(true);
+  };
+
+  useEffect(() => {
+    const calcularTotalUFNeto = () => {
+      const total = gestiones.reduce((acc, gestion) => acc + (parseFloat(gestion.valorNetoUF) || 0), 0);
+      setTotalUFNeto(total);
+    };
+
+    calcularTotalUFNeto();
+  }, [gestiones]);
+
+  useEffect(() => {
+    const fetchValorUF = async () => {
+      const today = new Date();
+      const formattedDate = today.toLocaleDateString('es-CL').split('/').reverse().join('-'); // dd-mm-yyyy
+      const response = await fetch(`https://mindicador.cl/api/uf/${formattedDate}`);
+      const data = await response.json();
+      if (data.serie && data.serie.length > 0) {
+        setValorUF(data.serie[0].valor);
+      }
+    };
+
+    fetchValorUF();
+  }, []);
+
+  useEffect(() => {
+    const calcularTotalesFacturadas = async () => {
+      if (titulo === "Terminados sin Facturar y Facturados no Pagados") {
+        const totalUFNetoTerminados = gestiones.reduce((acc, gestion) => {
+          return acc + (gestion.estadoGestion === "Terminado sin facturar" ? parseFloat(gestion.valorNetoUF) : 0);
+        }, 0);
+        setTotalUFNeto(totalUFNetoTerminados);
+
+        const totalCLPTerminados = (totalUFNetoTerminados * 1.19) * valorUF;
+        setTotalCLP(totalCLPTerminados);
+
+        const facturasPromises = gestiones.map(async (gestion) => {
+          if (gestion.estadoGestion === "Facturado") {
+            const facturasRef = collection(db, "Facturas");
+            const q = query(facturasRef, where("codigoSitio", "==", gestion.codigoSitio), where("ordenCompra", "==", gestion.numeroOC));
+            const querySnapshot = await getDocs(q);
+            return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          }
+          return [];
+        });
+
+        const facturasList = await Promise.all(facturasPromises);
+        const totalUFNetoFacts = facturasList.reduce((acc, facturas) => {
+          return acc + facturas.reduce((sum, factura) => sum + (parseFloat(factura.ufNeto) || 0), 0);
+        }, 0);
+        setTotalUFNetoFacts(totalUFNetoFacts);
+
+        const totalCLPFacts = facturasList.reduce((acc, facturas) => {
+          return acc + facturas.reduce((sum, factura) => sum + (parseFloat(factura.totalClp) || 0), 0);
+        }, 0);
+        setTotalCLPFacts(totalCLPFacts);
+
+        setTotalGestionesSinFacturar(gestiones.filter(gestion => gestion.estadoGestion === "Terminado sin facturar").length);
+        setTotalGestionesFacturadas(gestiones.filter(gestion => gestion.estadoGestion === "Facturado").length);
+      }
+
+      // Calcular total CLP para "Gestiones en Trámite" y "Delayed"
+      if (titulo === "Gestiones en Trámite" || titulo === "Delayed") {
+        const totalCLPTramites = (totalUFNeto * 1.19) * valorUF;
+        setTotalCLPTramites(totalCLPTramites);
+      }
+
+      // Calcular total CLP para "Eliminados sin cobrar"
+      if (titulo === "Eliminados sin cobrar") {
+        const totalCLPEliminados = gestiones.reduce((acc, gestion) => {
+          return acc + (gestion.totalCLPEliminado || 0);
+        }, 0);
+        setTotalCLPEliminados(totalCLPEliminados);
+      }
+    };
+
+    calcularTotalesFacturadas();
+  }, [gestiones, titulo, valorUF, totalUFNeto]);
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -121,6 +252,58 @@ export default function ListaGestiones({ titulo, gestiones }) {
 
     fetchUserRole();
   }, []);
+
+  useEffect(() => {
+    const calcularTotalesFacturados = async () => {
+      if (titulo === "Terminados y cobrados") {
+        // Calcular total para "Terminados"
+        const totalUFNetoTerminados = gestiones.reduce((acc, gestion) => {
+          return acc + (gestion.estadoOC === "Terminado" ? parseFloat(gestion.valorNetoUF) : 0);
+        }, 0);
+        setTotalUFNetoTerminadosCobrados(totalUFNetoTerminados);
+
+        const facturasTerminadosPromises = gestiones.map(async (gestion) => {
+          if (gestion.estadoOC === "Terminado") {
+            const facturasRef = collection(db, "Facturas");
+            const q = query(facturasRef, where("codigoSitio", "==", gestion.codigoSitio), where("ordenCompra", "==", gestion.numeroOC));
+            const querySnapshot = await getDocs(q);
+            return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          }
+          return [];
+        });
+
+        const facturasTerminadosList = await Promise.all(facturasTerminadosPromises);
+        const totalCLPTerminados = facturasTerminadosList.reduce((acc, facturas) => {
+          return acc + facturas.reduce((sum, factura) => sum + (parseFloat(factura.totalClp) || 0), 0);
+        }, 0);
+        setTotalCLPTerminadosCobrados(totalCLPTerminados);
+
+        // Calcular total para "Eliminados"
+        const totalUFNetoEliminados = gestiones.reduce((acc, gestion) => {
+          return acc + (gestion.estadoOC === "Eliminado y cobrado" ? parseFloat(gestion.valorNetoUF) : 0);
+        }, 0);
+        setTotalUFNetoEliminadosCobrados(totalUFNetoEliminados);
+
+        const facturasEliminadosPromises = gestiones.map(async (gestion) => {
+          if (gestion.estadoOC === "Eliminado y cobrado") {
+            const facturasRef = collection(db, "Facturas");
+            const q = query(facturasRef, where("codigoSitio", "==", gestion.codigoSitio), where("ordenCompra", "==", gestion.numeroOC));
+            const querySnapshot = await getDocs(q);
+            return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          }
+          return [];
+        });
+
+        const facturasEliminadosList = await Promise.all(facturasEliminadosPromises);
+        const totalCLPEliminados = facturasEliminadosList.reduce((acc, facturas) => {
+          return acc + facturas.reduce((sum, factura) => sum + (parseFloat(factura.totalClp) || 0), 0);
+        }, 0);
+        setTotalCLPEliminadosCobrados(totalCLPEliminados);
+      }
+    };
+
+    calcularTotalesFacturados();
+  }, [gestiones, titulo, valorUF]);
 
   return (
     <div className="bg-gray-800 p-6 rounded-lg mb-8">
@@ -177,7 +360,11 @@ export default function ListaGestiones({ titulo, gestiones }) {
           </thead>
           <tbody>
             {sortedGestiones.map((gestion, index) => (
-              <tr key={gestion.id} className="border-t border-gray-600 cursor-pointer hover:bg-gray-700" onClick={() => handleEditClick(gestion)}>
+              <tr 
+                key={gestion.id} 
+                className={`border-t border-gray-600 cursor-pointer hover:bg-gray-700 ${gestion.estadoOC === "Eliminado y cobrado" ? 'bg-red-900' : ''}`} 
+                onClick={() => handleEditClick(gestion)}
+              >
                 <td className="px-4 py-2 border border-gray-600">{index + 1}</td>
                 <td className="px-4 py-2 border border-gray-600">{gestion.numeroOC}</td>
                 <td className="px-4 py-2 border border-gray-600">{gestion.codigoSitio}</td>
@@ -194,7 +381,7 @@ export default function ListaGestiones({ titulo, gestiones }) {
                       }}
                       className="text-white-500 hover:text-yellow-300"
                     >
-                      {gestion.observaciones}
+                      {gestion.observaciones === "" || !gestion.observaciones ? "Agregar Observación" : gestion.observaciones}
                     </button>
                   </div>
                 </td>
@@ -248,19 +435,38 @@ export default function ListaGestiones({ titulo, gestiones }) {
                   )}
                   {titulo === "Terminados sin Facturar y Facturados no Pagados" && (
                     <div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleFacturar(gestion);
-                        }}
-                        className="text-blue-500 hover:text-green-700">Facturar</button><br />
-                      {gestion.estadoGestion === "Facturado" && (
+                      {isAdmin && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleFacturar(gestion);
+                          }}
+                          className="text-blue-500 hover:text-green-700"
+                        >
+                          Facturar
+                        </button>
+                      )}
+                      {gestion.estadoGestion === "Facturado" && isAdmin && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handlePagado(gestion);
                           }}
-                          className="text-green-500 hover:text-green-700">Pagado</button>
+                          className="text-green-500 hover:text-green-700"
+                        >
+                          Pagado
+                        </button>
+                      )}
+                      {gestion.estadoGestion === "Facturado" && isAdmin && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleVerFactura(gestion);
+                          }}
+                          className="text-white-500 hover:text-gray-300"
+                        >
+                          Ver Factura
+                        </button>
                       )}
                     </div>
                   )}
@@ -272,30 +478,43 @@ export default function ListaGestiones({ titulo, gestiones }) {
                           handleRetomar(gestion);
                         }}
                         className="text-blue-500 hover:text-blue-700">Retomar</button><br />
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleFacturar(gestion);
-                        }}
-                        className="text-blue-500 hover:text-green-700">Facturar</button><br />
-                      {gestion.estadoGestion === "Facturado" && (
+                      {isAdmin && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handlePagado(gestion);
+                            handleFacturar(gestion);
                           }}
-                          className="text-green-500 hover:text-green-700">Pagado</button>
+                          className="text-blue-500 hover:text-green-700"
+                        >
+                          Facturar
+                        </button>
                       )}
                     </div>
                   )}
                   {titulo === "Terminados y cobrados" && (
                     <div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleFacturar(gestion);
-                        }}
-                        className="text-blue-500 hover:text-green-700">Facturar</button>
+                      {isAdmin && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleFacturar(gestion);
+                          }}
+                          className="text-blue-500 hover:text-green-700"
+                        >
+                          Facturar
+                        </button>
+                      )}
+                      {gestion.estadoGestion === "Facturado" && isAdmin && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleVerFactura(gestion);
+                          }}
+                          className="text-white-500 hover:text-gray-300"
+                        >
+                          Ver Factura
+                        </button>
+                      )}
                     </div>
                   )}
                 </td>
@@ -304,6 +523,157 @@ export default function ListaGestiones({ titulo, gestiones }) {
           </tbody>
         </table>
       </div>
+      {isAdmin && (
+        <div className="text-white mt-4">
+          {titulo === "Gestiones en Trámite" || titulo === "Delayed" ? (
+            <div className="text-white mt-4">
+              <table className="min-w-full table-auto border-collapse border border-gray-600">
+                <thead>
+                  <tr>
+                    <th className="px-4 py-2 border border-gray-600">Total UF Neto</th>
+                    <th className="px-4 py-2 border border-gray-600">Total CLP</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className="px-4 py-2 border border-gray-600">{totalUFNeto}</td>
+                    <td className="px-4 py-2 border border-gray-600">{formatCurrency(totalCLPTramites)}</td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-2 border border-gray-600">Órdenes de compra pendientes</td>
+                    <td className="px-4 py-2 border border-gray-600">
+                      {gestiones.filter(gestion => gestion.numeroOC === "").length}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+
+          {titulo === "Terminados sin Facturar y Facturados no Pagados" ? (
+            <div>
+              <div className="text-white mt-4">
+                <h3>Terminados</h3>
+                <table className="min-w-full table-auto border-collapse border border-gray-600">
+                  <thead>
+                    <tr>
+                      <th className="px-4 py-2 border border-gray-600">Total UF Neto</th>
+                      <th className="px-4 py-2 border border-gray-600">Total CLP</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="px-4 py-2 border border-gray-600">{totalUFNeto}</td>
+                      <td className="px-4 py-2 border border-gray-600">{formatCurrency(totalCLP)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="text-white mt-4">
+                <h3>Facturados</h3>
+                <table className="min-w-full table-auto border-collapse border border-gray-600">
+                  <thead>
+                    <tr>
+                      <th className="px-4 py-2 border border-gray-600">Total UF Neto</th>
+                      <th className="px-4 py-2 border border-gray-600">Total CLP</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="px-4 py-2 border border-gray-600">{totalUFNetoFacts}</td>
+                      <td className="px-4 py-2 border border-gray-600">{formatCurrency(totalCLPFacts)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="text-white mt-4">
+                <h3></h3>
+                <table className="min-w-full table-auto border-collapse border border-gray-600">
+                  <thead>
+                    <tr>
+                      <th className="px-4 py-2 border border-gray-600">Gestiones sin facturar</th>
+                      <th className="px-4 py-2 border border-gray-600">Gestiones facturadas</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="px-4 py-2 border border-gray-600">{totalGestionesSinFacturar}</td>
+                      <td className="px-4 py-2 border border-gray-600">{totalGestionesFacturadas}</td>
+                    </tr>
+                    <tr>
+                    <td className="px-4 py-2 border border-gray-600">Órdenes de compra pendientes</td>
+                    <td className="px-4 py-2 border border-gray-600">
+                      {gestiones.filter(gestion => gestion.numeroOC === "").length}
+                    </td>
+                  </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : null}
+
+          {titulo === "Eliminados sin cobrar" && (
+            <div className="text-white mt-4">
+              <table className="min-w-full table-auto border-collapse border border-gray-600">
+                <thead>
+                  <tr>
+                    <th className="px-4 py-2 border border-gray-600">Total UF Neto</th>
+                    <th className="px-4 py-2 border border-gray-600">Total CLP</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className="px-4 py-2 border border-gray-600">{totalUFNeto}</td>
+                    <td className="px-4 py-2 border border-gray-600">{formatCurrency(totalCLPEliminados)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {titulo === "Terminados y cobrados" && (
+            <>
+              <div className="text-white mt-4">
+                <h3>Terminados</h3>
+                <table className="min-w-full table-auto border-collapse border border-gray-600">
+                  <thead>
+                    <tr>
+                      <th className="px-4 py-2 border border-gray-600">Total UF Neto</th>
+                      <th className="px-4 py-2 border border-gray-600">Total CLP</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="px-4 py-2 border border-gray-600">{totalUFNetoTerminadosCobrados}</td>
+                      <td className="px-4 py-2 border border-gray-600">{formatCurrency(totalCLPTerminadosCobrados)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="text-white mt-4">
+                <h3>Eliminados</h3>
+                <table className="min-w-full table-auto border-collapse border border-gray-600">
+                  <thead>
+                    <tr>
+                      <th className="px-4 py-2 border border-gray-600">Total UF Neto</th>
+                      <th className="px-4 py-2 border border-gray-600">Total CLP</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="px-4 py-2 border border-gray-600">{totalUFNetoEliminadosCobrados}</td>
+                      <td className="px-4 py-2 border border-gray-600">{formatCurrency(totalCLPEliminadosCobrados)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </div>
+      )}
       <EditGestionModal
         isOpen={isEditModalOpen}
         onClose={() => setEditModalOpen(false)}
@@ -327,6 +697,7 @@ export default function ListaGestiones({ titulo, gestiones }) {
           // Aquí puedes agregar lógica para refrescar la lista si es necesario
         }}
       />
+      <ViewFacturas isOpen={viewFacturasOpen} onClose={() => setViewFacturasOpen(false)} facturas={facturas} />
     </div>
   );
 }

@@ -76,7 +76,7 @@ export default function FacturarModal({ isOpen, onClose, gestion }) {
         await updateDoc(gestionRef, {
           estadoGestion: "Facturado",
         });
-      } else if (gestion.estadoOC === "Terminado") {
+      } else if (gestion.estadoOC === "Terminado" || gestion.estadoOC === "Eliminado y cobrado") {
         // No se realizan cambios
       } else {
         await updateDoc(gestionRef, {
