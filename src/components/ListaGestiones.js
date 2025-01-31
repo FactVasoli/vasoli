@@ -362,7 +362,7 @@ export default function ListaGestiones({ titulo, gestiones }) {
             {sortedGestiones.map((gestion, index) => (
               <tr 
                 key={gestion.id} 
-                className={`border-t border-gray-600 cursor-pointer hover:bg-gray-700 ${gestion.estadoOC === "Eliminado y cobrado" ? 'bg-red-900' : ''}`} 
+                className={`border-t border-gray-600 cursor-pointer hover:bg-gray-700 ${gestion.estadoOC === "Eliminado y cobrado" ? 'bg-red-900 hover:bg-red-800' : ''}`} 
                 onClick={() => handleEditClick(gestion)}
               >
                 <td className="px-4 py-2 border border-gray-600">{index + 1}</td>

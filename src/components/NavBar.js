@@ -134,7 +134,6 @@ export default function NavBar() {
                     <Link href="/administracion/usuarios" className="dropdown-item">Usuarios</Link>
                     <Link href="/administracion/clientes" className="dropdown-item">Clientes</Link>
                     <Link href="/administracion/gestores" className="dropdown-item">Gestores</Link>
-                    <Link href="/administracion" className="dropdown-item">Ir a Administración</Link>
                   </div>
                 )}
               </div>

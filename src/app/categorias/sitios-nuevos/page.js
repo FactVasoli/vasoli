@@ -8,13 +8,14 @@ import { useRouter } from "next/navigation";
 import AddGestionModal from "@/components/AddGestionModal";
 import ListaGestiones from "@/components/ListaGestiones";
 import { auth } from "@/firebase.config";
+import BottomNavBar from "@/components/BottomNavBar";
 
 export default function SitiosNuevosPage() {
   const [clientes, setClientes] = useState([]);
   const [gestiones, setGestiones] = useState([]);
   const [showAgregarGestion, setShowAgregarGestion] = useState(false);
   const router = useRouter();
-  const categoriaInicial = "Sitios nuevos";
+  const [categoriaInicial, setCategoriaInicial] = useState("Sitios nuevos");
 
   useEffect(() => {
     const verificarUsuario = async () => {
@@ -76,6 +77,15 @@ export default function SitiosNuevosPage() {
     gestion.categoria === categoriaInicial
   );
 
+  const tipoCategoria = [
+    "Sitios nuevos",
+    "Renegociación",
+    "C13",
+    "Bienes nacionales",
+    "DAS",
+    "Misceláneos"
+  ].includes(categoriaInicial) ? "normal" : "especial";
+
   return (
     <div>
       <NavBar />
@@ -93,7 +103,7 @@ export default function SitiosNuevosPage() {
           onSave={handleSave}
           clientes={clientes}
           categoriaInicial={categoriaInicial}
-          tipoCategoria="normal"
+          tipoCategoria={tipoCategoria}
         />
         
         {/* Usar el componente ListaGestiones para cada lista solo si hay elementos */}
@@ -102,8 +112,8 @@ export default function SitiosNuevosPage() {
         {gestionesFacturado.length > 0 && <ListaGestiones titulo="Terminados sin Facturar y Facturados no Pagados" gestiones={gestionesFacturado} />}
         {gestionesEliminados.length > 0 && <ListaGestiones titulo="Eliminados sin cobrar" gestiones={gestionesEliminados} />}
         {gestionesTerminados.length > 0 && <ListaGestiones titulo="Terminados y cobrados" gestiones={gestionesTerminados} />}
-        
       </div>
+      <BottomNavBar categoriaInicial={categoriaInicial} setCategoriaInicial={setCategoriaInicial} />
     </div>
   );
 }

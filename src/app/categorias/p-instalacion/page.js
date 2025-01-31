@@ -8,13 +8,14 @@ import { useRouter } from "next/navigation";
 import AddGestionModal from "@/components/AddGestionModal";
 import ListaGestiones from "@/components/ListaGestiones";
 import { auth } from "@/firebase.config";
+import BottomNavBar from "@/components/BottomNavBar";
 
 export default function SitiosNuevosPage() {
   const [clientes, setClientes] = useState([]);
   const [gestiones, setGestiones] = useState([]);
   const [showAgregarGestion, setShowAgregarGestion] = useState(false);
   const router = useRouter();
-  const categoriaInicial = "Permiso de instalación";
+  const [categoriaInicial, setCategoriaInicial] = useState("Permiso de instalación");
 
   useEffect(() => {
     const verificarUsuario = async () => {
@@ -102,8 +103,8 @@ export default function SitiosNuevosPage() {
         {gestionesFacturado.length > 0 && <ListaGestiones titulo="Terminados sin Facturar y Facturados no Pagados" gestiones={gestionesFacturado} />}
         {gestionesEliminados.length > 0 && <ListaGestiones titulo="Eliminados sin cobrar" gestiones={gestionesEliminados} />}
         {gestionesTerminados.length > 0 && <ListaGestiones titulo="Terminados y cobrados" gestiones={gestionesTerminados} />}
-        
       </div>
+      <BottomNavBar categoriaInicial={categoriaInicial} setCategoriaInicial={setCategoriaInicial} />
     </div>
   );
 }

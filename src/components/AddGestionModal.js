@@ -179,6 +179,7 @@ export default function AddGestionModal({ isOpen, onClose, onSave, clientes, cat
                 value={formData.codigoSitio}
                 onChange={(e) => setFormData({ ...formData, codigoSitio: e.target.value })}
                 className="input w-full"
+                required
               />
             </div>
             <div>
@@ -187,6 +188,7 @@ export default function AddGestionModal({ isOpen, onClose, onSave, clientes, cat
                 value={formData.region}
                 onChange={(e) => setFormData({ ...formData, region: e.target.value })}
                 className="input w-full"
+                required
               >
                 <option value="">Seleccione Región</option>
                 {REGIONES_CHILE.map((region) => (
@@ -206,6 +208,7 @@ export default function AddGestionModal({ isOpen, onClose, onSave, clientes, cat
                 value={formData.nombreSitio}
                 onChange={(e) => setFormData({ ...formData, nombreSitio: e.target.value })}
                 className="input w-full"
+                required
               />
             </div>
             <div>
@@ -227,6 +230,7 @@ export default function AddGestionModal({ isOpen, onClose, onSave, clientes, cat
                 value={formData.estadoOC}
                 onChange={(e) => setFormData({ ...formData, estadoOC: e.target.value })}
                 className="input w-full"
+                required
               >
                 <option value="">Seleccione Estado OC</option>
                 {estadosOC.map((estado) => (
@@ -242,6 +246,7 @@ export default function AddGestionModal({ isOpen, onClose, onSave, clientes, cat
                 value={formData.estadoGestion}
                 onChange={(e) => setFormData({ ...formData, estadoGestion: e.target.value })}
                 className="input w-full"
+                required
               >
                 <option value="">Seleccione Estado Gestión</option>
                 {estadosGestion.map((estado) => (
