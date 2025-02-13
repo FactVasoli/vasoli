@@ -67,6 +67,7 @@ export default function AddGestionModal({ isOpen, onClose, onSave, clientes, cat
           "Búsqueda",
           "Negociación",
           "I.Barrido",
+          "TSS",
           "Aprobado CP y ATP",
           "Carpeta legal",
           "Fiscalía",

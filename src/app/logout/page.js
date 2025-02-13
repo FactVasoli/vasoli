@@ -7,7 +7,7 @@ import Spinner from "@/components/Spinner";
 
 export default function LogoutPage() {
   const router = useRouter();
-  const [countdown, setCountdown] = useState(5);
+  const [countdown, setCountdown] = useState(3);
 
   useEffect(() => {
     let timer;

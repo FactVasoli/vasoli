@@ -30,6 +30,7 @@ export default function ListaGestiones({ titulo, gestiones }) {
   const [totalCLPTerminadosCobrados, setTotalCLPTerminadosCobrados] = useState(0);
   const [totalUFNetoEliminadosCobrados, setTotalUFNetoEliminadosCobrados] = useState(0);
   const [totalCLPEliminadosCobrados, setTotalCLPEliminadosCobrados] = useState(0);
+  const [isMinimized, setIsMinimized] = useState(false);
 
   const formatDate = (dateString) => {
     const [year, month, day] = dateString.split("-");
@@ -88,30 +89,46 @@ export default function ListaGestiones({ titulo, gestiones }) {
   };
 
   const handleEliminar = async (gestion) => {
-    if (confirm("¿Deseas eliminar esta gestión? Se moverá a la lista 'Eliminados sin cobrar'")) {
-      const gestionRef = doc(db, "Gestiones", gestion.id);
+    const confirmEliminar = confirm("¿Desea eliminar esta gestión? Se moverá a la lista 'Eliminados sin cobrar'");
+    if (!confirmEliminar) {
+      return; // Fin del proceso si se cancela
+    }
+
+    const isToday = confirm("¿La fecha de eliminación es hoy?");
+    let formattedDate;
+
+    if (isToday) {
       const today = new Date();
-      const formattedDate = today.toLocaleDateString('es-CL').split('/').reverse().join('-'); // Formato dd-mm-yyyy
-
-      // Obtener el valor de la UF en la fecha de eliminación
-      const response = await fetch(`https://mindicador.cl/api/uf/${formattedDate}`);
-      const data = await response.json();
-
-      // Verificar si hay datos en la serie
-      if (data.serie && data.serie.length > 0) {
-        const valorUFEliminacion = data.serie[0].valor;
-
-        const totalCLPEliminado = (parseFloat(gestion.valorNetoUF) * 1.19) * valorUFEliminacion;
-
-        await updateDoc(gestionRef, {
-          estadoOC: "Eliminado no facturado",
-          estadoGestion: "Eliminado",
-          fechaEliminacion: formattedDate,
-          totalCLPEliminado: totalCLPEliminado,
-        });
-      } else {
-        alert("No se pudo obtener el valor de la UF para la fecha seleccionada.");
+      formattedDate = today.toLocaleDateString('es-CL').split('/').reverse().join('-'); // Formato dd-mm-yyyy
+    } else {
+      formattedDate = prompt("Ingrese fecha en formato dd-mm-yyyy:");
+      // Validar el formato de la fecha ingresada
+      const datePattern = /^\d{2}-\d{2}-\d{4}$/;
+      if (!datePattern.test(formattedDate)) {
+        alert("Formato de fecha inválido. Debe ser dd-mm-yyyy.");
+        return;
       }
+    }
+
+    // Obtener el valor de la UF en la fecha de eliminación
+    const response = await fetch(`https://mindicador.cl/api/uf/${formattedDate}`);
+    const data = await response.json();
+
+    // Verificar si hay datos en la serie
+    if (data.serie && data.serie.length > 0) {
+      const valorUFEliminacion = data.serie[0].valor;
+
+      const totalCLPEliminado = (parseFloat(gestion.valorNetoUF) * 1.19) * valorUFEliminacion;
+
+      const gestionRef = doc(db, "Gestiones", gestion.id);
+      await updateDoc(gestionRef, {
+        estadoOC: "Eliminado no facturado",
+        estadoGestion: "Eliminado",
+        fechaEliminacion: formattedDate,
+        totalCLPEliminado: totalCLPEliminado,
+      });
+    } else {
+      alert("No se pudo obtener el valor de la UF para la fecha seleccionada.");
     }
   };
 
@@ -257,26 +274,40 @@ export default function ListaGestiones({ titulo, gestiones }) {
     const calcularTotalesFacturados = async () => {
       if (titulo === "Terminados y cobrados") {
         // Calcular total para "Terminados"
-        const totalUFNetoTerminados = gestiones.reduce((acc, gestion) => {
-          return acc + (gestion.estadoOC === "Terminado" ? parseFloat(gestion.valorNetoUF) : 0);
-        }, 0);
-        setTotalUFNetoTerminadosCobrados(totalUFNetoTerminados);
-
-        const facturasTerminadosPromises = gestiones.map(async (gestion) => {
+        const totalUFNetoTerminados = await Promise.all(gestiones.map(async (gestion) => {
           if (gestion.estadoOC === "Terminado") {
             const facturasRef = collection(db, "Facturas");
             const q = query(facturasRef, where("codigoSitio", "==", gestion.codigoSitio), where("ordenCompra", "==", gestion.numeroOC));
             const querySnapshot = await getDocs(q);
-            return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const facturas = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            // Sumar el valor UF de las facturas
+            return facturas.reduce((acc, factura) => acc + (parseFloat(factura.ufNeto) || 0), 0);
           }
-          return [];
-        });
+          return 0;
+        }));
 
-        const facturasTerminadosList = await Promise.all(facturasTerminadosPromises);
-        const totalCLPTerminados = facturasTerminadosList.reduce((acc, facturas) => {
-          return acc + facturas.reduce((sum, factura) => sum + (parseFloat(factura.totalClp) || 0), 0);
-        }, 0);
-        setTotalCLPTerminadosCobrados(totalCLPTerminados);
+        // Sumar todos los valores UF netos
+        const totalUFNeto = totalUFNetoTerminados.reduce((acc, val) => acc + val, 0);
+        setTotalUFNetoTerminadosCobrados(totalUFNeto);
+
+        // Calcular total CLP para "Terminados"
+        const totalCLPTerminados = await Promise.all(gestiones.map(async (gestion) => {
+          if (gestion.estadoOC === "Terminado") {
+            const facturasRef = collection(db, "Facturas");
+            const q = query(facturasRef, where("codigoSitio", "==", gestion.codigoSitio), where("ordenCompra", "==", gestion.numeroOC));
+            const querySnapshot = await getDocs(q);
+            const facturas = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            // Sumar el total CLP de las facturas
+            return facturas.reduce((acc, factura) => acc + (parseFloat(factura.totalClp) || 0), 0);
+          }
+          return 0;
+        }));
+
+        // Sumar todos los valores CLP
+        const totalCLP = totalCLPTerminados.reduce((acc, val) => acc + val, 0);
+        setTotalCLPTerminadosCobrados(totalCLP);
 
         // Calcular total para "Eliminados"
         const totalUFNetoEliminados = gestiones.reduce((acc, gestion) => {
@@ -303,374 +334,389 @@ export default function ListaGestiones({ titulo, gestiones }) {
     };
 
     calcularTotalesFacturados();
-  }, [gestiones, titulo, valorUF]);
+  }, [gestiones, titulo]);
+
+  const toggleMinimize = () => {
+    setIsMinimized(prev => !prev);
+  };
 
   return (
     <div className="bg-gray-800 p-6 rounded-lg mb-8">
-      <h2 className="text-xl font-semibold text-white mb-4">{titulo}</h2>
-      <div className="overflow-x-auto">
-        <table className="min-w-full table-auto border-collapse border border-gray-600">
-          <thead>
-            <tr>
-              <th className="px-4 py-2 border border-gray-600" style={{ width: '55px' }}>N°</th>
-              <th className="px-4 py-2 border border-gray-600" style={{ width: '72px' }} onClick={() => handleSort('numeroOC')}>
-                Orden de Compra
-                <span className={`ml-2 ${sortConfig.key === 'numeroOC' ? (sortConfig.direction === 'asc' ? 'text-green-500' : 'text-green-500') : 'text-white'}`}>
-                  {sortConfig.key === 'numeroOC' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '←'}
-                </span>
-              </th>
-              <th className="px-4 py-2 border border-gray-600" style={{ width: '93px' }} onClick={() => handleSort('codigoSitio')}>
-                ID
-                <span className={`ml-2 ${sortConfig.key === 'codigoSitio' ? (sortConfig.direction === 'asc' ? 'text-green-500' : 'text-green-500') : 'text-white'}`}>
-                  {sortConfig.key === 'codigoSitio' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '←'}
-                </span>
-              </th>
-              <th className="px-4 py-2 border border-gray-600" style={{ width: '106px' }} onClick={() => handleSort('nombreSitio')}>
-                Nombre Sitio
-                <span className={`ml-2 ${sortConfig.key === 'nombreSitio' ? (sortConfig.direction === 'asc' ? 'text-green-500' : 'text-green-500') : 'text-white'}`}>
-                  {sortConfig.key === 'nombreSitio' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '←'}
-                </span>
-              </th>
-              <th className="px-4 py-2 border border-gray-600" style={{ width: '76px' }} onClick={() => handleSort('fechaAsignacion')}>
-                Fecha Asignación
-                <span className={`ml-2 ${sortConfig.key === 'fechaAsignacion' ? (sortConfig.direction === 'asc' ? 'text-green-500' : 'text-green-500') : 'text-white'}`}>
-                  {sortConfig.key === 'fechaAsignacion' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '←'}
-                </span>
-              </th>
-              <th className="px-4 py-2 border border-gray-600" style={{ width: '55px' }} onClick={() => handleSort('region')}>
-                Región
-                <span className={`ml-2 ${sortConfig.key === 'region' ? (sortConfig.direction === 'asc' ? 'text-green-500' : 'text-green-500') : 'text-white'}`}>
-                  {sortConfig.key === 'region' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '←'}
-                </span>
-              </th>
-              <th className="px-4 py-2 border border-gray-600" style={{ width: '114px' }} onClick={() => handleSort('estadoGestion')}>
-                Estado
-                <span className={`ml-2 ${sortConfig.key === 'estadoGestion' ? (sortConfig.direction === 'asc' ? 'text-green-500' : 'text-green-500') : 'text-white'}`}>
-                  {sortConfig.key === 'estadoGestion' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '←'}
-                </span>
-              </th>
-              <th className="px-4 py-2 border border-gray-600" style={{ width: '440px' }}>Observaciones</th>
-              {isAdmin && (
-                <th className="px-4 py-2 border border-gray-600" style={{ width: '100px' }}>
-                  UF Neto
-                </th>
-              )}
-              <th className="px-4 py-2 border border-gray-600" style={{ width: '50px' }}>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sortedGestiones.map((gestion, index) => (
-              <tr 
-                key={gestion.id} 
-                className={`border-t border-gray-600 cursor-pointer hover:bg-gray-700 ${gestion.estadoOC === "Eliminado y cobrado" ? 'bg-red-900 hover:bg-red-800' : ''}`} 
-                onClick={() => handleEditClick(gestion)}
-              >
-                <td className="px-4 py-2 border border-gray-600">{index + 1}</td>
-                <td className="px-4 py-2 border border-gray-600">{gestion.numeroOC}</td>
-                <td className="px-4 py-2 border border-gray-600">{gestion.codigoSitio}</td>
-                <td className="px-4 py-2 border border-gray-600">{gestion.nombreSitio}</td>
-                <td className="px-4 py-2 border border-gray-600">{formatDate(gestion.fechaAsignacion)}</td>
-                <td className="px-4 py-2 border border-gray-600">{gestion.region}</td>
-                <td className="px-4 py-2 border border-gray-600">{gestion.estadoGestion}</td>
-                <td className="px-4 py-2 border border-gray-600">
-                  <div className="h-[75px] overflow-y-hidden" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAddObservacionClick(gestion);
-                      }}
-                      className="text-white-500 hover:text-yellow-300"
-                    >
-                      {gestion.observaciones === "" || !gestion.observaciones ? "Agregar Observación" : gestion.observaciones}
-                    </button>
-                  </div>
-                </td>
-                {isAdmin && (
-                  <td className="px-4 py-2 border border-gray-600">{gestion.valorNetoUF}</td>
-                )}
-                <td className="px-4 py-2 border border-gray-600">
-                  {titulo === "Gestiones en Trámite" && (
-                    <div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleTerminar(gestion);
-                        }}
-                        className="text-green-500 hover:text-green-700">Terminar</button><br />
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDetener(gestion);
-                        }}
-                        className="text-yellow-500 hover:text-yellow-700">Detener</button><br />
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEliminar(gestion);
-                        }}
-                        className="text-red-500 hover:text-red-700">Eliminar</button>
-                    </div>
-                  )}
-                  {titulo === "Delayed" && (
-                    <div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRetomar(gestion);
-                        }}
-                        className="text-blue-500 hover:text-blue-700">Retomar</button><br />
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleTerminar(gestion);
-                        }}
-                        className="text-green-500 hover:text-green-700">Terminar</button><br />
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEliminar(gestion);
-                        }}
-                        className="text-red-500 hover:text-red-700">Eliminar</button>
-                    </div>
-                  )}
-                  {titulo === "Terminados sin Facturar y Facturados no Pagados" && (
-                    <div>
-                      {isAdmin && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleFacturar(gestion);
-                          }}
-                          className="text-blue-500 hover:text-green-700"
-                        >
-                          Facturar
-                        </button>
-                      )}
-                      {gestion.estadoGestion === "Facturado" && isAdmin && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handlePagado(gestion);
-                          }}
-                          className="text-green-500 hover:text-green-700"
-                        >
-                          Pagado
-                        </button>
-                      )}
-                      {gestion.estadoGestion === "Facturado" && isAdmin && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleVerFactura(gestion);
-                          }}
-                          className="text-white-500 hover:text-gray-300"
-                        >
-                          Ver Factura
-                        </button>
-                      )}
-                    </div>
-                  )}
-                  {titulo === "Eliminados sin cobrar" && (
-                    <div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRetomar(gestion);
-                        }}
-                        className="text-blue-500 hover:text-blue-700">Retomar</button><br />
-                      {isAdmin && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleFacturar(gestion);
-                          }}
-                          className="text-blue-500 hover:text-green-700"
-                        >
-                          Facturar
-                        </button>
-                      )}
-                    </div>
-                  )}
-                  {titulo === "Terminados y cobrados" && (
-                    <div>
-                      {isAdmin && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleFacturar(gestion);
-                          }}
-                          className="text-blue-500 hover:text-green-700"
-                        >
-                          Facturar
-                        </button>
-                      )}
-                      {gestion.estadoGestion === "Facturado" && isAdmin && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleVerFactura(gestion);
-                          }}
-                          className="text-white-500 hover:text-gray-300"
-                        >
-                          Ver Factura
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold text-white">{titulo}</h2>
+        <button
+          onClick={toggleMinimize}
+        >
+          <h1 className="text-white bg-gray-800 hover:bg-gray-800 rounded-md px-2 py-1 font-bold">{isMinimized ? "+" : "-"}</h1>
+        </button>
       </div>
-      {isAdmin && (
-        <div className="text-white mt-4">
-          {titulo === "Gestiones en Trámite" || titulo === "Delayed" ? (
-            <div className="text-white mt-4">
-              <table className="min-w-full table-auto border-collapse border border-gray-600">
-                <thead>
-                  <tr>
-                    <th className="px-4 py-2 border border-gray-600">Total UF Neto</th>
-                    <th className="px-4 py-2 border border-gray-600">Total CLP</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td className="px-4 py-2 border border-gray-600">{totalUFNeto}</td>
-                    <td className="px-4 py-2 border border-gray-600">{formatCurrency(totalCLPTramites)}</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-2 border border-gray-600">Órdenes de compra pendientes</td>
+      {!isMinimized && (
+        <div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full table-auto border-collapse border border-gray-600">
+              <thead>
+                <tr>
+                  <th className="px-4 py-2 border border-gray-600" style={{ width: '55px' }}>N°</th>
+                  <th className="px-4 py-2 border border-gray-600" style={{ width: '72px' }} onClick={() => handleSort('numeroOC')}>
+                    Orden de Compra
+                    <span className={`ml-2 ${sortConfig.key === 'numeroOC' ? (sortConfig.direction === 'asc' ? 'text-green-500' : 'text-green-500') : 'text-white'}`}>
+                      {sortConfig.key === 'numeroOC' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '←'}
+                    </span>
+                  </th>
+                  <th className="px-4 py-2 border border-gray-600" style={{ width: '93px' }} onClick={() => handleSort('codigoSitio')}>
+                    ID
+                    <span className={`ml-2 ${sortConfig.key === 'codigoSitio' ? (sortConfig.direction === 'asc' ? 'text-green-500' : 'text-green-500') : 'text-white'}`}>
+                      {sortConfig.key === 'codigoSitio' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '←'}
+                    </span>
+                  </th>
+                  <th className="px-4 py-2 border border-gray-600" style={{ width: '106px' }} onClick={() => handleSort('nombreSitio')}>
+                    Nombre Sitio
+                    <span className={`ml-2 ${sortConfig.key === 'nombreSitio' ? (sortConfig.direction === 'asc' ? 'text-green-500' : 'text-green-500') : 'text-white'}`}>
+                      {sortConfig.key === 'nombreSitio' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '←'}
+                    </span>
+                  </th>
+                  <th className="px-4 py-2 border border-gray-600" style={{ width: '76px' }} onClick={() => handleSort('fechaAsignacion')}>
+                    Fecha Asignación
+                    <span className={`ml-2 ${sortConfig.key === 'fechaAsignacion' ? (sortConfig.direction === 'asc' ? 'text-green-500' : 'text-green-500') : 'text-white'}`}>
+                      {sortConfig.key === 'fechaAsignacion' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '←'}
+                    </span>
+                  </th>
+                  <th className="px-4 py-2 border border-gray-600" style={{ width: '55px' }} onClick={() => handleSort('region')}>
+                    Región
+                    <span className={`ml-2 ${sortConfig.key === 'region' ? (sortConfig.direction === 'asc' ? 'text-green-500' : 'text-green-500') : 'text-white'}`}>
+                      {sortConfig.key === 'region' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '←'}
+                    </span>
+                  </th>
+                  <th className="px-4 py-2 border border-gray-600" style={{ width: '114px' }} onClick={() => handleSort('estadoGestion')}>
+                    Estado
+                    <span className={`ml-2 ${sortConfig.key === 'estadoGestion' ? (sortConfig.direction === 'asc' ? 'text-green-500' : 'text-green-500') : 'text-white'}`}>
+                      {sortConfig.key === 'estadoGestion' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '←'}
+                    </span>
+                  </th>
+                  <th className="px-4 py-2 border border-gray-600" style={{ width: '440px' }}>Observaciones</th>
+                  {isAdmin && (
+                    <th className="px-4 py-2 border border-gray-600" style={{ width: '100px' }}>
+                      UF Neto
+                    </th>
+                  )}
+                  <th className="px-4 py-2 border border-gray-600" style={{ width: '50px' }}>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedGestiones.map((gestion, index) => (
+                  <tr 
+                    key={gestion.id} 
+                    className={`border-t border-gray-600 cursor-pointer hover:bg-gray-700 ${gestion.estadoOC === "Eliminado y cobrado" ? 'bg-red-900 hover:bg-red-800' : ''}`} 
+                    onClick={() => handleEditClick(gestion)}
+                  >
+                    <td className="px-4 py-2 border border-gray-600">{index + 1}</td>
+                    <td className="px-4 py-2 border border-gray-600">{gestion.numeroOC}</td>
+                    <td className="px-4 py-2 border border-gray-600">{gestion.codigoSitio}</td>
+                    <td className="px-4 py-2 border border-gray-600">{gestion.nombreSitio}</td>
+                    <td className="px-4 py-2 border border-gray-600">{formatDate(gestion.fechaAsignacion)}</td>
+                    <td className="px-4 py-2 border border-gray-600">{gestion.region}</td>
+                    <td className="px-4 py-2 border border-gray-600">{gestion.estadoGestion}</td>
                     <td className="px-4 py-2 border border-gray-600">
-                      {gestiones.filter(gestion => gestion.numeroOC === "").length}
+                      <div className="h-[75px] overflow-y-hidden" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAddObservacionClick(gestion);
+                          }}
+                          className="text-white-500 hover:text-yellow-300"
+                        >
+                          {gestion.observaciones === "" || !gestion.observaciones ? "Agregar Observación" : gestion.observaciones}
+                        </button>
+                      </div>
+                    </td>
+                    {isAdmin && (
+                      <td className="px-4 py-2 border border-gray-600">{gestion.valorNetoUF}</td>
+                    )}
+                    <td className="px-4 py-2 border border-gray-600">
+                      {titulo === "Gestiones en Trámite" && (
+                        <div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleTerminar(gestion);
+                            }}
+                            className="text-green-500 hover:text-green-700">Terminar</button><br />
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDetener(gestion);
+                            }}
+                            className="text-yellow-500 hover:text-yellow-700">Detener</button><br />
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEliminar(gestion);
+                            }}
+                            className="text-red-500 hover:text-red-700">Eliminar</button>
+                        </div>
+                      )}
+                      {titulo === "Delayed" && (
+                        <div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRetomar(gestion);
+                            }}
+                            className="text-blue-500 hover:text-blue-700">Retomar</button><br />
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleTerminar(gestion);
+                            }}
+                            className="text-green-500 hover:text-green-700">Terminar</button><br />
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEliminar(gestion);
+                            }}
+                            className="text-red-500 hover:text-red-700">Eliminar</button>
+                        </div>
+                      )}
+                      {titulo === "Terminados sin Facturar y Facturados no Pagados" && (
+                        <div>
+                          {isAdmin && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleFacturar(gestion);
+                              }}
+                              className="text-blue-500 hover:text-green-700"
+                            >
+                              Facturar
+                            </button>
+                          )}
+                          {gestion.estadoGestion === "Facturado" && isAdmin && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handlePagado(gestion);
+                              }}
+                              className="text-green-500 hover:text-green-700"
+                            >
+                              Pagado
+                            </button>
+                          )}
+                          {gestion.estadoGestion === "Facturado" && isAdmin && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleVerFactura(gestion);
+                              }}
+                              className="text-white-500 hover:text-gray-300"
+                            >
+                              Ver Factura
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      {titulo === "Eliminados sin cobrar" && (
+                        <div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRetomar(gestion);
+                            }}
+                            className="text-blue-500 hover:text-blue-700">Retomar</button><br />
+                          {isAdmin && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleFacturar(gestion);
+                              }}
+                              className="text-blue-500 hover:text-green-700"
+                            >
+                              Facturar
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      {titulo === "Terminados y cobrados" && (
+                        <div>
+                          {isAdmin && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleFacturar(gestion);
+                              }}
+                              className="text-blue-500 hover:text-green-700"
+                            >
+                              Facturar
+                            </button>
+                          )}
+                          {gestion.estadoGestion === "Facturado" && isAdmin && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleVerFactura(gestion);
+                              }}
+                              className="text-white-500 hover:text-gray-300"
+                            >
+                              Ver Factura
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </td>
                   </tr>
-                </tbody>
-              </table>
-            </div>
-          ) : null}
-
-          {titulo === "Terminados sin Facturar y Facturados no Pagados" ? (
-            <div>
-              <div className="text-white mt-4">
-                <h3>Terminados</h3>
-                <table className="min-w-full table-auto border-collapse border border-gray-600">
-                  <thead>
-                    <tr>
-                      <th className="px-4 py-2 border border-gray-600">Total UF Neto</th>
-                      <th className="px-4 py-2 border border-gray-600">Total CLP</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td className="px-4 py-2 border border-gray-600">{totalUFNeto}</td>
-                      <td className="px-4 py-2 border border-gray-600">{formatCurrency(totalCLP)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="text-white mt-4">
-                <h3>Facturados</h3>
-                <table className="min-w-full table-auto border-collapse border border-gray-600">
-                  <thead>
-                    <tr>
-                      <th className="px-4 py-2 border border-gray-600">Total UF Neto</th>
-                      <th className="px-4 py-2 border border-gray-600">Total CLP</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td className="px-4 py-2 border border-gray-600">{totalUFNetoFacts}</td>
-                      <td className="px-4 py-2 border border-gray-600">{formatCurrency(totalCLPFacts)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="text-white mt-4">
-                <h3></h3>
-                <table className="min-w-full table-auto border-collapse border border-gray-600">
-                  <thead>
-                    <tr>
-                      <th className="px-4 py-2 border border-gray-600">Gestiones sin facturar</th>
-                      <th className="px-4 py-2 border border-gray-600">Gestiones facturadas</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td className="px-4 py-2 border border-gray-600">{totalGestionesSinFacturar}</td>
-                      <td className="px-4 py-2 border border-gray-600">{totalGestionesFacturadas}</td>
-                    </tr>
-                    <tr>
-                    <td className="px-4 py-2 border border-gray-600">Órdenes de compra pendientes</td>
-                    <td className="px-4 py-2 border border-gray-600">
-                      {gestiones.filter(gestion => gestion.numeroOC === "").length}
-                    </td>
-                  </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : null}
-
-          {titulo === "Eliminados sin cobrar" && (
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {isAdmin && (
             <div className="text-white mt-4">
-              <table className="min-w-full table-auto border-collapse border border-gray-600">
-                <thead>
-                  <tr>
-                    <th className="px-4 py-2 border border-gray-600">Total UF Neto</th>
-                    <th className="px-4 py-2 border border-gray-600">Total CLP</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td className="px-4 py-2 border border-gray-600">{totalUFNeto}</td>
-                    <td className="px-4 py-2 border border-gray-600">{formatCurrency(totalCLPEliminados)}</td>
-                  </tr>
-                </tbody>
-              </table>
+              {titulo === "Gestiones en Trámite" || titulo === "Delayed" ? (
+                <div className="text-white mt-4">
+                  <table className="min-w-full table-auto border-collapse border border-gray-600">
+                    <thead>
+                      <tr>
+                        <th className="px-4 py-2 border border-gray-600">Total UF Neto</th>
+                        <th className="px-4 py-2 border border-gray-600">Total CLP</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className="px-4 py-2 border border-gray-600">{totalUFNeto}</td>
+                        <td className="px-4 py-2 border border-gray-600">{formatCurrency(totalCLPTramites)}</td>
+                      </tr>
+                      <tr>
+                        <td className="px-4 py-2 border border-gray-600">Órdenes de compra pendientes</td>
+                        <td className="px-4 py-2 border border-gray-600">
+                          {gestiones.filter(gestion => gestion.numeroOC === "").length}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              ) : null}
+
+              {titulo === "Terminados sin Facturar y Facturados no Pagados" ? (
+                <div>
+                  <div className="text-white mt-4">
+                    <h3>Terminados</h3>
+                    <table className="min-w-full table-auto border-collapse border border-gray-600">
+                      <thead>
+                        <tr>
+                          <th className="px-4 py-2 border border-gray-600">Total UF Neto</th>
+                          <th className="px-4 py-2 border border-gray-600">Total CLP</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td className="px-4 py-2 border border-gray-600">{totalUFNeto}</td>
+                          <td className="px-4 py-2 border border-gray-600">{formatCurrency(totalCLP)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="text-white mt-4">
+                    <h3>Facturados</h3>
+                    <table className="min-w-full table-auto border-collapse border border-gray-600">
+                      <thead>
+                        <tr>
+                          <th className="px-4 py-2 border border-gray-600">Total UF Neto</th>
+                          <th className="px-4 py-2 border border-gray-600">Total CLP</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td className="px-4 py-2 border border-gray-600">{totalUFNetoFacts}</td>
+                          <td className="px-4 py-2 border border-gray-600">{formatCurrency(totalCLPFacts)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="text-white mt-4">
+                    <h3></h3>
+                    <table className="min-w-full table-auto border-collapse border border-gray-600">
+                      <thead>
+                        <tr>
+                          <th className="px-4 py-2 border border-gray-600">Gestiones sin facturar</th>
+                          <th className="px-4 py-2 border border-gray-600">Gestiones facturadas</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td className="px-4 py-2 border border-gray-600">{totalGestionesSinFacturar}</td>
+                          <td className="px-4 py-2 border border-gray-600">{totalGestionesFacturadas}</td>
+                        </tr>
+                        <tr>
+                        <td className="px-4 py-2 border border-gray-600">Órdenes de compra pendientes</td>
+                        <td className="px-4 py-2 border border-gray-600">
+                          {gestiones.filter(gestion => gestion.numeroOC === "").length}
+                        </td>
+                      </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : null}
+
+              {titulo === "Eliminados sin cobrar" && (
+                <div className="text-white mt-4">
+                  <table className="min-w-full table-auto border-collapse border border-gray-600">
+                    <thead>
+                      <tr>
+                        <th className="px-4 py-2 border border-gray-600">Total UF Neto</th>
+                        <th className="px-4 py-2 border border-gray-600">Total CLP</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className="px-4 py-2 border border-gray-600">{totalUFNeto}</td>
+                        <td className="px-4 py-2 border border-gray-600">{formatCurrency(totalCLPEliminados)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {titulo === "Terminados y cobrados" && (
+                <>
+                  <div className="text-white mt-4">
+                    <h3>Terminados</h3>
+                    <table className="min-w-full table-auto border-collapse border border-gray-600">
+                      <thead>
+                        <tr>
+                          <th className="px-4 py-2 border border-gray-600">Total UF Neto</th>
+                          <th className="px-4 py-2 border border-gray-600">Total CLP</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td className="px-4 py-2 border border-gray-600">{totalUFNetoTerminadosCobrados}</td>
+                          <td className="px-4 py-2 border border-gray-600">{formatCurrency(totalCLPTerminadosCobrados)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="text-white mt-4">
+                    <h3>Eliminados</h3>
+                    <table className="min-w-full table-auto border-collapse border border-gray-600">
+                      <thead>
+                        <tr>
+                          <th className="px-4 py-2 border border-gray-600">Total UF Neto</th>
+                          <th className="px-4 py-2 border border-gray-600">Total CLP</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td className="px-4 py-2 border border-gray-600">{totalUFNetoEliminadosCobrados}</td>
+                          <td className="px-4 py-2 border border-gray-600">{formatCurrency(totalCLPEliminadosCobrados)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
             </div>
-          )}
-
-          {titulo === "Terminados y cobrados" && (
-            <>
-              <div className="text-white mt-4">
-                <h3>Terminados</h3>
-                <table className="min-w-full table-auto border-collapse border border-gray-600">
-                  <thead>
-                    <tr>
-                      <th className="px-4 py-2 border border-gray-600">Total UF Neto</th>
-                      <th className="px-4 py-2 border border-gray-600">Total CLP</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td className="px-4 py-2 border border-gray-600">{totalUFNetoTerminadosCobrados}</td>
-                      <td className="px-4 py-2 border border-gray-600">{formatCurrency(totalCLPTerminadosCobrados)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="text-white mt-4">
-                <h3>Eliminados</h3>
-                <table className="min-w-full table-auto border-collapse border border-gray-600">
-                  <thead>
-                    <tr>
-                      <th className="px-4 py-2 border border-gray-600">Total UF Neto</th>
-                      <th className="px-4 py-2 border border-gray-600">Total CLP</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td className="px-4 py-2 border border-gray-600">{totalUFNetoEliminadosCobrados}</td>
-                      <td className="px-4 py-2 border border-gray-600">{formatCurrency(totalCLPEliminadosCobrados)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </>
           )}
         </div>
       )}
