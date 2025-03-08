@@ -8,7 +8,7 @@ import FacturarModal from "./FacturarModal";
 import AddObservacion from "./AddObservacion";
 import ViewFacturas from './ViewFacturas';
 
-export default function ListaGestiones({ titulo, gestiones }) {
+export default function ListaGestiones({ titulo, gestiones, tipoCategoria }) {
   const [sortConfig, setSortConfig] = useState({ key: 'fechaAsignacion', direction: 'asc' });
   const [isEditModalOpen, setEditModalOpen] = useState(false);
   const [selectedGestion, setSelectedGestion] = useState(null);
@@ -728,6 +728,7 @@ export default function ListaGestiones({ titulo, gestiones }) {
           setEditModalOpen(false);
           // Aquí puedes agregar lógica para refrescar la lista si es necesario
         }}
+        tipoCategoria={tipoCategoria}
       />
       <FacturarModal
         isOpen={isFacturarModalOpen}

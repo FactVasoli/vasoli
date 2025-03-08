@@ -29,44 +29,135 @@ export default function Home() {
         </h1>
         
         {userData ? (
-          <div className="space-y-6 mt-8">
-            <div className="bg-gray-800 p-6 rounded-lg">
-              <p className="text-gray-300 mb-4">
-                Para agregar un sitio nuevo, ve a:
-              </p>
-              <Link 
-                href="/sitios" 
-                className="inline-block px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-              >
-                Sitios
-              </Link>
-            </div>
-
-            <div className="bg-gray-800 p-6 rounded-lg">
-              <p className="text-gray-300 mb-4">
-                Para agregar una nueva gestión, ve a:
-              </p>
-              <Link 
-                href="/gestiones" 
-                className="inline-block px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-              >
-                Gestiones
-              </Link>
-            </div>
-
-            {userData.cargo === "admin" && (
-              <div className="bg-gray-800 p-6 rounded-lg">
-                <p className="text-gray-300 mb-4">
-                  Para acceder al módulo de pruebas, ve a:
-                </p>
-                <Link 
-                  href="/prueba" 
-                  className="inline-block px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                >
-                  Prueba
-                </Link>
+          <div className="flex space-x-6 mt-8">
+            {/* Contenedor de Categorías */}
+            <div className="bg-gray-800 p-6 rounded-lg flex-1">
+              <h2 className="text-xl font-bold text-gray-300 mb-4">Categorías</h2>
+              <div className="space-y-4">
+                <div className="flex flex-col space-y-2">
+                  <Link 
+                    href="/categorias/sitios-nuevos" 
+                    className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    Sitios nuevos
+                  </Link>
+                  <Link 
+                    href="/categorias/renegociacion" 
+                    className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    Renegociación
+                  </Link>
+                  <Link 
+                    href="/categorias/c13" 
+                    className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    C13
+                  </Link>
+                  <Link 
+                    href="/categorias/bbnns" 
+                    className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    Bienes nacionales
+                  </Link>
+                  <Link 
+                    href="/categorias/das" 
+                    className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    DAS
+                  </Link>
+                </div>
+                <hr className="border-gray-600" />
+                <div className="flex flex-col space-y-2">
+                  <Link 
+                    href="/categorias/p-instalacion" 
+                    className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    Permiso de instalación
+                  </Link>
+                  <Link 
+                    href="/categorias/a-instalacion" 
+                    className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    Aviso de instalación
+                  </Link>
+                  <Link 
+                    href="/categorias/obra-menor" 
+                    className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    Obra menor
+                  </Link>
+                  <Link 
+                    href="/categorias/recepcion-obras" 
+                    className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    Recepción de obras
+                  </Link>
+                </div>
+                <hr className="border-gray-600" />
+                <div className="flex flex-col space-y-2">
+                  <Link 
+                    href="/categorias/miscelaneos" 
+                    className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    Misceláneos
+                  </Link>
+                </div>
               </div>
-            )}
+            </div>
+
+            {/* Contenedores del lado derecho */}
+            <div className="flex-1 space-y-6">
+              {/* Contenedor derecho 1 "Buscador" */}
+              <div className="bg-gray-800 p-6 rounded-lg">
+                <h2 className="text-xl font-bold text-gray-300 mb-4">Buscador</h2>
+                <div className="space-y-4">
+                  <div className="flex flex-col space-y-2">
+                    <Link 
+                      href="/busqueda/gestiones" 
+                      className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                    >
+                      Gestiones
+                    </Link>
+                    <Link 
+                      href="/busqueda/facturas" 
+                      className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                    >
+                      Facturas
+                    </Link>
+                  </div>
+                  <hr className="border-gray-600" />
+                </div>
+              </div>
+
+              {/* Contenedor derecho 2 "Sin título 1" */}
+              <div className="bg-gray-800 p-6 rounded-lg">
+                <div className="space-y-4">
+                  <div className="flex flex-col space-y-2">
+                    <Link 
+                      href="/busqueda/lista-gestiones" 
+                      className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                    >
+                      Lista de gestiones
+                    </Link>
+                  </div>
+                  <hr className="border-gray-600" />
+                </div>
+              </div>
+
+              {/* Contenedor derecho 3 "Sin título 2" */}
+              <div className="bg-gray-800 p-6 rounded-lg">
+                <div className="space-y-4">
+                  <div className="flex flex-col space-y-2">
+                    <Link 
+                      href="/dashboard" 
+                      className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                    >
+                      Pizarra
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         ) : (
           <p className="mb-4">La base de datos se ha inicializado correctamente.</p>

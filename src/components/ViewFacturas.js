@@ -27,19 +27,19 @@ const ViewFacturas = ({ isOpen, onClose, facturas }) => {
 
   if (!isOpen) return null;
 
-  // Depuración: Verificar si facturas está llegando correctamente
-  console.log("Facturas recibidas:", facturas);
+  // Asegúrate de que facturas sea un array
+  const safeFacturas = Array.isArray(facturas) ? facturas : [];
 
   // Calcular totales con valores seguros
-  const totalUfNeto = facturas.reduce((acc, factura) => acc + (parseFloat(factura.ufNeto) || 0), 0);
-  const totalUf = facturas.reduce((acc, factura) => acc + (parseFloat(factura.totalUf) || 0), 0);
-  const totalClp = facturas.reduce((acc, factura) => acc + (parseFloat(factura.totalClp) || 0), 0);
+  const totalUfNeto = safeFacturas.reduce((acc, factura) => acc + (parseFloat(factura.ufNeto) || 0), 0);
+  const totalUf = safeFacturas.reduce((acc, factura) => acc + (parseFloat(factura.totalUf) || 0), 0);
+  const totalClp = safeFacturas.reduce((acc, factura) => acc + (parseFloat(factura.totalClp) || 0), 0);
 
   // Depuración: Verificar cálculos de totales
   console.log("Total UF Neto:", totalUfNeto);
   console.log("Total UF:", totalUf);
   console.log("Total CLP:", totalClp);
-  console.log("¿Mostrar tabla de totales?", facturas.length > 0);
+  console.log("¿Mostrar tabla de totales?", safeFacturas.length > 0);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" onClick={onClose}>
@@ -48,8 +48,8 @@ const ViewFacturas = ({ isOpen, onClose, facturas }) => {
         <button onClick={onClose} className="text-red-500 hover:text-red-700">Cerrar</button>
 
         {/* Tabla principal de facturas */}
-        {facturas.length >= 0 && (
-          <table key={facturas.length} className="min-w-full mt-4">
+        {safeFacturas.length >= 0 && (
+          <table key={safeFacturas.length} className="min-w-full mt-4">
             <thead>
               <tr>
                 <th className="px-4 py-2 text-left text-white">N° Factura</th>
@@ -61,7 +61,7 @@ const ViewFacturas = ({ isOpen, onClose, facturas }) => {
               </tr>
             </thead>
             <tbody>
-              {facturas.map((factura, index) => (
+              {safeFacturas.map((factura, index) => (
                 <tr key={factura.id || index} className="border-t border-gray-600">
                   <td className="px-4 py-2 text-white">{factura.numeroFactura}</td>
                   <td className="px-4 py-2 text-white">{formatDate(factura.fecha)}</td>
@@ -76,7 +76,7 @@ const ViewFacturas = ({ isOpen, onClose, facturas }) => {
         )}
 
         {/* Tabla separada para totales */}
-        {facturas.length >= 2 && (
+        {safeFacturas.length >= 2 && (
           <table className="min-w-full mt-4 border-t border-gray-600">
             <thead>
               <tr>

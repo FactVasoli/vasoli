@@ -106,6 +106,10 @@ export default function FacturarModal({ isOpen, onClose, gestion }) {
     onClose();
   };
 
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(value);
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -182,8 +186,8 @@ export default function FacturarModal({ isOpen, onClose, gestion }) {
             <div>
               <label className="block text-white text-sm mb-1">Total CLP</label>
               <input
-                type="number"
-                value={totalClp}
+                type="text"
+                value={formatCurrency(totalClp)}
                 className="input w-full"
                 disabled
               />

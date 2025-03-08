@@ -23,7 +23,7 @@ const REGIONES_CHILE = [
   { codigo: "XII", nombre: "XII - Región de Magallanes" }
 ];
 
-export default function EditGestionModal({ isOpen, onClose, gestion, onSave, tipoCategoria }) {
+export default function EditGestionModal({ isOpen, onClose, gestion, tipoCategoria, onSave}) {
   const [formData, setFormData] = useState({
     numeroOC: "",
     cliente: "",

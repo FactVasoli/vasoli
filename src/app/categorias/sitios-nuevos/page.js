@@ -107,11 +107,11 @@ export default function SitiosNuevosPage() {
         />
         
         {/* Usar el componente ListaGestiones para cada lista solo si hay elementos */}
-        {gestionesEnTramite.length > 0 && <ListaGestiones titulo="Gestiones en Trámite" gestiones={gestionesEnTramite} />}
-        {gestionesDelayed.length > 0 && <ListaGestiones titulo="Delayed" gestiones={gestionesDelayed} />}
-        {gestionesFacturado.length > 0 && <ListaGestiones titulo="Terminados sin Facturar y Facturados no Pagados" gestiones={gestionesFacturado} />}
-        {gestionesEliminados.length > 0 && <ListaGestiones titulo="Eliminados sin cobrar" gestiones={gestionesEliminados} />}
-        {gestionesTerminados.length > 0 && <ListaGestiones titulo="Terminados y cobrados" gestiones={gestionesTerminados} />}
+        {gestionesEnTramite.length > 0 && <ListaGestiones titulo="Gestiones en Trámite" gestiones={gestionesEnTramite} tipoCategoria={tipoCategoria} />}
+        {gestionesDelayed.length > 0 && <ListaGestiones titulo="Delayed" gestiones={gestionesDelayed} tipoCategoria={tipoCategoria} />}
+        {gestionesFacturado.length > 0 && <ListaGestiones titulo="Terminados sin Facturar y Facturados no Pagados" gestiones={gestionesFacturado} tipoCategoria={tipoCategoria} />}
+        {gestionesEliminados.length > 0 && <ListaGestiones titulo="Eliminados sin cobrar" gestiones={gestionesEliminados} tipoCategoria={tipoCategoria} />}
+        {gestionesTerminados.length > 0 && <ListaGestiones titulo="Terminados y cobrados" gestiones={gestionesTerminados} tipoCategoria={tipoCategoria} />}
       </div>
       <BottomNavBar categoriaInicial={categoriaInicial} setCategoriaInicial={setCategoriaInicial} />
     </div>
