@@ -18,12 +18,11 @@ export default function SitiosNuevosPage() {
   const [categoriaInicial, setCategoriaInicial] = useState("Misceláneos");
 
   useEffect(() => {
-    const verificarUsuario = async () => {
-      const user = auth.currentUser;
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (!user) {
         router.push("/login");
       }
-    };
+    });
 
     const cargarClientes = async () => {
       const querySnapshot = await getDocs(collection(db, "Clientes"));
@@ -35,22 +34,22 @@ export default function SitiosNuevosPage() {
     };
 
     const cargarGestiones = () => {
-      const unsubscribe = onSnapshot(collection(db, "Gestiones"), (querySnapshot) => {
+      const unsubscribeGestiones = onSnapshot(collection(db, "Gestiones"), (querySnapshot) => {
         const gestionesData = querySnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
         }));
         setGestiones(gestionesData);
       });
-      return unsubscribe; // Return the unsubscribe function
+      return unsubscribeGestiones;
     };
 
-    verificarUsuario();
     cargarClientes();
     const unsubscribeGestiones = cargarGestiones();
 
     return () => {
-      unsubscribeGestiones(); // Clean up the listener on unmount
+      unsubscribe();
+      unsubscribeGestiones();
     };
   }, [router]);
 

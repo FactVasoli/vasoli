@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/firebase.config";
@@ -12,6 +12,7 @@ export default function NavBar() {
     ingresar: false,
     administracion: false,
     usuario: false,
+    buscador: false,
   });
   const [userData, setUserData] = useState(null);
   const router = useRouter();
@@ -43,6 +44,7 @@ export default function NavBar() {
         ingresar: false,
         administracion: false,
         usuario: false,
+        buscador: false,
       };
       newDropdownState[dropdown] = true;
       return newDropdownState;
@@ -64,31 +66,38 @@ export default function NavBar() {
         ingresar: false,
         administracion: false,
         usuario: false,
+        buscador: false,
       };
       newDropdownState[dropdown] = !prev[dropdown];
       return newDropdownState;
     });
   };
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        !event.target.closest('.relative') &&
-        !event.target.closest('.nav-link')
-      ) {
-        clearTimeout(closeTimeout);
-        setShowDropdown({
+  const handleClickOutside = useCallback((event) => {
+    if (
+      !event.target.closest('.relative') &&
+      !event.target.closest('.nav-link')
+    ) {
+      clearTimeout(closeTimeout);
+      setShowDropdown((prevState) => {
+        if (!prevState.categorias && !prevState.ingresar && !prevState.administracion && !prevState.usuario && !prevState.buscador) {
+          return prevState;
+        }
+        return {
           categorias: false,
           ingresar: false,
           administracion: false,
           usuario: false,
-        });
-      }
-    };
+          buscador: false,
+        };
+      });
+    }
+  }, [closeTimeout]);
 
+  useEffect(() => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [closeTimeout]);
+  }, [handleClickOutside]);
 
   return (
     <nav className="nav">
@@ -117,6 +126,22 @@ export default function NavBar() {
                   <Link href="/categorias/obra-menor" className="dropdown-item">Obra menor</Link>
                   <Link href="/categorias/das" className="dropdown-item">DAS</Link>
                   <Link href="/categorias/miscelaneos" className="dropdown-item">Misceláneos</Link>
+                </div>
+              )}
+            </div>
+
+            <div className="relative"
+              onMouseEnter={() => handleMouseEnter('buscador')}
+              onMouseLeave={() => handleMouseLeave('buscador')}
+            >
+              <button className="nav-link" onClick={() => handleClick('buscador')}>
+                Buscador
+              </button>
+              {showDropdown.buscador && (
+                <div className="dropdown transition-all duration-300 ease-in-out">
+                  <Link href="/busqueda/lista-gestiones" className="dropdown-item">Lista de Gestiones</Link>
+                  <Link href="/busqueda/lista-facturas" className="dropdown-item">Lista de facturas</Link>
+                  <Link href="/busqueda/oc-pendientes" className="dropdown-item">O/C pendientes</Link>
                 </div>
               )}
             </div>

@@ -1,15 +1,18 @@
 'use client'; // Marca este archivo como un componente del lado del cliente
 
-import { useState, useEffect } from "react";
-import NavBar from "@/components/NavBar";
+import { useState, useEffect, useCallback } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "@/firebase.config";
+import { db, auth } from "@/firebase.config";
+import NavBar from "@/components/NavBar";
 import BuscadorGestiones from "@/components/BuscadorGestiones"; // Importamos el buscador
 import ListadorGestiones2 from "@/components/ListadorGestiones2";
+import { useRouter } from "next/navigation";
 
 export default function ListaGestionesPage() {
   const [gestiones, setGestiones] = useState([]);
   const [filteredGestiones, setFilteredGestiones] = useState([]); // Estado para gestiones filtradas
+
+  const router = useRouter();
 
   // Función para obtener las fechas de facturación
   const obtenerFechasFacturacion = async (codigoSitio, numeroOC) => {
@@ -34,7 +37,17 @@ export default function ListaGestionesPage() {
     };
 
     fetchGestiones();
-  }, []);
+  }, []); // Agregar un arreglo de dependencias vacío para que se ejecute solo una vez al montar el componente
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (!user) {
+        router.push("/login");
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
 
   const obtenerNumeroFactura = async (codigoSitio, numeroOC) => {
     const facturasRef = collection(db, "Facturas");
@@ -45,9 +58,9 @@ export default function ListaGestionesPage() {
   };
 
   // Función para manejar el filtrado de gestiones
-  const handleFilter = (filteredGestiones) => {
+  const handleFilter = useCallback((filteredGestiones) => {
     setFilteredGestiones(filteredGestiones);
-  };
+  }, []); // Memorizar la función para evitar recrearla en cada renderizado
 
   return (
     <div>

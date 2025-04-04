@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import EditGestionModal from "./EditGestionModal";
 import ViewFacturas from "./ViewFacturas";
 import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "@/firebase.config";
+import { db, auth } from "@/firebase.config";
+import { doc, getDoc } from "firebase/firestore";
 
 export default function ListadorGestiones2({ gestiones }) {
     const [sortConfig, setSortConfig] = useState({ key: 'categoria', direction: 'asc' });
@@ -14,6 +15,7 @@ export default function ListadorGestiones2({ gestiones }) {
     const [facturas, setFacturas] = useState([]);
     const [showDetails, setShowDetails] = useState(false);
     const [valorUfHoy, setValorUfHoy] = useState(null);
+    const [isAdmin, setIsAdmin] = useState(false);
 
     const formatDate = (dateString) => {
         if (!dateString) return "N/A";
@@ -54,6 +56,21 @@ export default function ListadorGestiones2({ gestiones }) {
     
         obtenerValorUfHoy();
     }, []);
+
+    useEffect(() => {
+        const fetchUserRole = async () => {
+          const user = auth.currentUser;
+          if (user) {
+            const userDoc = await getDoc(doc(db, "Usuarios", user.uid));
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              setIsAdmin(userData.cargo === "admin");
+            }
+          }
+        };
+    
+        fetchUserRole();
+      }, []);
 
     const sortedGestiones = [...gestiones].sort((a, b) => {
         const aValue = a[sortConfig.key] || "";
@@ -107,12 +124,14 @@ export default function ListadorGestiones2({ gestiones }) {
                     <div className="bg-gray-700 text-white px-4 py-2 rounded mr-4">
                         Valor UF hoy: {valorUfHoy ? valorUfHoy : "Cargando..."}
                     </div>
-                    <button
-                        onClick={() => setShowDetails(!showDetails)}
-                        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
-                    >
-                        {showDetails ? "Ocultar detalles" : "Mostrar más detalles"}
-                    </button>
+                    {isAdmin && (
+                        <button
+                            onClick={() => setShowDetails(!showDetails)}
+                            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
+                        >
+                            {showDetails ? "Ocultar detalles" : "Mostrar más detalles"}
+                        </button>
+                    )}
                 </div>
 
                 <table className="min-w-full table-auto border-collapse border border-gray-600 mt-4 bg-gray-800">
