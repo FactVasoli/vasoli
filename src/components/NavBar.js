@@ -116,16 +116,16 @@ export default function NavBar() {
               </button>
               {showDropdown.categorias && (
                 <div className="dropdown transition-all duration-300 ease-in-out">
-                  <Link href="/categorias/sitios-nuevos" className="dropdown-item">Sitios nuevos</Link>
-                  <Link href="/categorias/renegociacion" className="dropdown-item">Renegociación</Link>
-                  <Link href="/categorias/c13" className="dropdown-item">C13</Link>
-                  <Link href="/categorias/bbnns" className="dropdown-item">BBNNs</Link>
-                  <Link href="/categorias/p-instalacion" className="dropdown-item">Permiso de Instalación</Link>
-                  <Link href="/categorias/a-instalacion" className="dropdown-item">Aviso de Instalación</Link>
-                  <Link href="/categorias/recepcion-obras" className="dropdown-item">Recepción de obras</Link>
-                  <Link href="/categorias/obra-menor" className="dropdown-item">Obra menor</Link>
-                  <Link href="/categorias/das" className="dropdown-item">DAS</Link>
-                  <Link href="/categorias/miscelaneos" className="dropdown-item">Misceláneos</Link>
+                  <Link href="/categorias?categoria=Sitios nuevos" className="dropdown-item">Sitios nuevos</Link>
+                  <Link href="/categorias?categoria=Renegociación" className="dropdown-item">Renegociación</Link>
+                  <Link href="/categorias?categoria=C13" className="dropdown-item">C13</Link>
+                  <Link href="/categorias?categoria=Bienes nacionales" className="dropdown-item">BBNNs</Link>
+                  <Link href="/categorias?categoria=Permiso de instalación" className="dropdown-item">Permiso de Instalación</Link>
+                  <Link href="/categorias?categoria=Aviso de instalación" className="dropdown-item">Aviso de Instalación</Link>
+                  <Link href="/categorias?categoria=Recepción de obras" className="dropdown-item">Recepción de obras</Link>
+                  <Link href="/categorias?categoria=Obra menor" className="dropdown-item">Obra menor</Link>
+                  <Link href="/categorias?categoria=DAS" className="dropdown-item">DAS</Link>
+                  <Link href="/categorias?categoria=Misceláneos" className="dropdown-item">Misceláneos</Link>
                 </div>
               )}
             </div>

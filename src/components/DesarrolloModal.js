@@ -19,8 +19,6 @@ export default function DesarrolloModal({ isOpen, onClose }) {
           {/* Este texto se editará manualmente según sea necesario */}
           <p>
             Por mejorar:
-            -Check en Lista de Gestiones para ver O/C pendientes.
-            -Eliminar contador de $$$ de listas de Terminados.
             -Añadir columnas adicionales a BBNNs.
             -Añadir a NavBar más opciones para navegación.
             -Identificar información delicada faltante para que solo usuarios admin puedan ver.

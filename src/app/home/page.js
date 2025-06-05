@@ -45,31 +45,31 @@ export default function Home() {
                   <div className="space-y-4">
                     <div className="flex flex-col space-y-2">
                       <Link 
-                        href="/categorias/sitios-nuevos" 
+                        href="/categorias?categoria=Sitios nuevos" 
                         className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                       >
                         Sitios nuevos
                       </Link>
                       <Link 
-                        href="/categorias/renegociacion" 
+                        href="/categorias?categoria=Renegociación" 
                         className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                       >
                         Renegociación
                       </Link>
                       <Link 
-                        href="/categorias/c13" 
+                        href="/categorias?categoria=C13" 
                         className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                       >
                         C13
                       </Link>
                       <Link 
-                        href="/categorias/bbnns" 
+                        href="/categorias?categoria=Bienes nacionales" 
                         className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                       >
                         Bienes nacionales
                       </Link>
                       <Link 
-                        href="/categorias/das" 
+                        href="/categorias?categoria=DAS" 
                         className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                       >
                         DAS
@@ -78,25 +78,25 @@ export default function Home() {
                     <hr className="border-gray-600" />
                     <div className="flex flex-col space-y-2">
                       <Link 
-                        href="/categorias/p-instalacion" 
+                        href="/categorias?categoria=Permiso de instalación" 
                         className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                       >
                         Permiso de instalación
                       </Link>
                       <Link 
-                        href="/categorias/a-instalacion" 
+                        href="/categorias?categoria=Aviso de instalación" 
                         className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                       >
                         Aviso de instalación
                       </Link>
                       <Link 
-                        href="/categorias/obra-menor" 
+                        href="/categorias?categoria=Obra menor" 
                         className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                       >
                         Obra menor
                       </Link>
                       <Link 
-                        href="/categorias/recepcion-obras" 
+                        href="/categorias?categoria=Recepción de obras" 
                         className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                       >
                         Recepción de obras
@@ -105,7 +105,7 @@ export default function Home() {
                     <hr className="border-gray-600" />
                     <div className="flex flex-col space-y-2">
                       <Link 
-                        href="/categorias/miscelaneos" 
+                        href="/categorias?categoria=Misceláneos" 
                         className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                       >
                         Misceláneos

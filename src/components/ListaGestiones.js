@@ -26,11 +26,31 @@ export default function ListaGestiones({ titulo, gestiones, tipoCategoria }) {
   const [valorUF, setValorUF] = useState(0);
   const [viewFacturasOpen, setViewFacturasOpen] = useState(false);
   const [facturas, setFacturas] = useState([]);
-  const [totalUFNetoTerminadosCobrados, setTotalUFNetoTerminadosCobrados] = useState(0);
-  const [totalCLPTerminadosCobrados, setTotalCLPTerminadosCobrados] = useState(0);
-  const [totalUFNetoEliminadosCobrados, setTotalUFNetoEliminadosCobrados] = useState(0);
-  const [totalCLPEliminadosCobrados, setTotalCLPEliminadosCobrados] = useState(0);
   const [isMinimized, setIsMinimized] = useState(false);
+
+  const estadosGestionNormal = [
+    "Iniciado",
+    "Búsqueda",
+    "Negociación",
+    "Aprobado CP y ATP",
+    "Carpeta legal",
+    "Fiscalía",
+    "Firmado CP y ATP",
+    "Terminado sin facturar",
+    "Eliminado",
+    "Facturado",
+  ];
+
+  const estadosGestionEspecial = [
+    "Armado expediente",
+    "Ingreso DOM",
+    "Seguimiento DOM",
+    "Rechazo DOM",
+    "Re-Ingreso DOM",
+    "Permiso",
+    "Eliminado",
+    "Facturado",
+  ];
 
   const formatDate = (dateString) => {
     const [year, month, day] = dateString.split("-");
@@ -178,6 +198,32 @@ export default function ListaGestiones({ titulo, gestiones, tipoCategoria }) {
     setViewFacturasOpen(true);
   };
 
+  const handleAvanzarEstado = async (gestion) => {
+    const estadosGestion = tipoCategoria === "especial" ? estadosGestionEspecial : estadosGestionNormal;
+    const indiceActual = estadosGestion.indexOf(gestion.estadoGestion);
+    
+    if (indiceActual < estadosGestion.length - 1) {
+      const nuevoEstado = estadosGestion[indiceActual + 1];
+      const gestionRef = doc(db, "Gestiones", gestion.id);
+      await updateDoc(gestionRef, {
+        estadoGestion: nuevoEstado
+      });
+    }
+  };
+
+  const handleRetrocederEstado = async (gestion) => {
+    const estadosGestion = tipoCategoria === "especial" ? estadosGestionEspecial : estadosGestionNormal;
+    const indiceActual = estadosGestion.indexOf(gestion.estadoGestion);
+    
+    if (indiceActual > 0) {
+      const nuevoEstado = estadosGestion[indiceActual - 1];
+      const gestionRef = doc(db, "Gestiones", gestion.id);
+      await updateDoc(gestionRef, {
+        estadoGestion: nuevoEstado
+      });
+    }
+  };
+
   useEffect(() => {
     const calcularTotalUFNeto = () => {
       const total = gestiones.reduce((acc, gestion) => acc + (parseFloat(gestion.valorNetoUF) || 0), 0);
@@ -270,72 +316,6 @@ export default function ListaGestiones({ titulo, gestiones, tipoCategoria }) {
     fetchUserRole();
   }, []);
 
-  useEffect(() => {
-    const calcularTotalesFacturados = async () => {
-      if (titulo === "Terminados y cobrados") {
-        // Calcular total para "Terminados"
-        const totalUFNetoTerminados = await Promise.all(gestiones.map(async (gestion) => {
-          if (gestion.estadoOC === "Terminado") {
-            const facturasRef = collection(db, "Facturas");
-            const q = query(facturasRef, where("codigoSitio", "==", gestion.codigoSitio), where("ordenCompra", "==", gestion.numeroOC));
-            const querySnapshot = await getDocs(q);
-            const facturas = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
-            // Sumar el valor UF de las facturas
-            return facturas.reduce((acc, factura) => acc + (parseFloat(factura.ufNeto) || 0), 0);
-          }
-          return 0;
-        }));
-
-        // Sumar todos los valores UF netos
-        const totalUFNeto = totalUFNetoTerminados.reduce((acc, val) => acc + val, 0);
-        setTotalUFNetoTerminadosCobrados(totalUFNeto);
-
-        // Calcular total CLP para "Terminados"
-        const totalCLPTerminados = await Promise.all(gestiones.map(async (gestion) => {
-          if (gestion.estadoOC === "Terminado") {
-            const facturasRef = collection(db, "Facturas");
-            const q = query(facturasRef, where("codigoSitio", "==", gestion.codigoSitio), where("ordenCompra", "==", gestion.numeroOC));
-            const querySnapshot = await getDocs(q);
-            const facturas = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
-            // Sumar el total CLP de las facturas
-            return facturas.reduce((acc, factura) => acc + (parseFloat(factura.totalClp) || 0), 0);
-          }
-          return 0;
-        }));
-
-        // Sumar todos los valores CLP
-        const totalCLP = totalCLPTerminados.reduce((acc, val) => acc + val, 0);
-        setTotalCLPTerminadosCobrados(totalCLP);
-
-        // Calcular total para "Eliminados"
-        const totalUFNetoEliminados = gestiones.reduce((acc, gestion) => {
-          return acc + (gestion.estadoOC === "Eliminado y cobrado" ? parseFloat(gestion.valorNetoUF) : 0);
-        }, 0);
-        setTotalUFNetoEliminadosCobrados(totalUFNetoEliminados);
-
-        const facturasEliminadosPromises = gestiones.map(async (gestion) => {
-          if (gestion.estadoOC === "Eliminado y cobrado") {
-            const facturasRef = collection(db, "Facturas");
-            const q = query(facturasRef, where("codigoSitio", "==", gestion.codigoSitio), where("ordenCompra", "==", gestion.numeroOC));
-            const querySnapshot = await getDocs(q);
-            return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          }
-          return [];
-        });
-
-        const facturasEliminadosList = await Promise.all(facturasEliminadosPromises);
-        const totalCLPEliminados = facturasEliminadosList.reduce((acc, facturas) => {
-          return acc + facturas.reduce((sum, factura) => sum + (parseFloat(factura.totalClp) || 0), 0);
-        }, 0);
-        setTotalCLPEliminadosCobrados(totalCLPEliminados);
-      }
-    };
-
-    calcularTotalesFacturados();
-  }, [gestiones, titulo]);
-
   const toggleMinimize = () => {
     setIsMinimized(prev => !prev);
   };
@@ -415,7 +395,37 @@ export default function ListaGestiones({ titulo, gestiones, tipoCategoria }) {
                     <td className="px-4 py-2 border border-gray-600">{gestion.nombreSitio}</td>
                     <td className="px-4 py-2 border border-gray-600">{formatDate(gestion.fechaAsignacion)}</td>
                     <td className="px-4 py-2 border border-gray-600">{gestion.region}</td>
-                    <td className="px-4 py-2 border border-gray-600">{gestion.estadoGestion}</td>
+                    <td className="px-4 py-2 border border-gray-600">
+                      <div className="flex items-center justify-between">
+                        <span>{gestion.estadoGestion}</span>
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRetrocederEstado(gestion);
+                            }}
+                            className="text-gray-400 hover:text-white"
+                            disabled={tipoCategoria === "especial" 
+                              ? estadosGestionEspecial.indexOf(gestion.estadoGestion) === 0
+                              : estadosGestionNormal.indexOf(gestion.estadoGestion) === 0}
+                          >
+                            ←
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAvanzarEstado(gestion);
+                            }}
+                            className="text-gray-400 hover:text-white"
+                            disabled={tipoCategoria === "especial"
+                              ? estadosGestionEspecial.indexOf(gestion.estadoGestion) === estadosGestionEspecial.length - 1
+                              : estadosGestionNormal.indexOf(gestion.estadoGestion) === estadosGestionNormal.length - 1}
+                          >
+                            →
+                          </button>
+                        </div>
+                      </div>
+                    </td>
                     <td className="px-4 py-2 border border-gray-600">
                       <div className="h-[75px] overflow-y-hidden" onClick={(e) => e.stopPropagation()}>
                         <button
@@ -675,46 +685,6 @@ export default function ListaGestiones({ titulo, gestiones, tipoCategoria }) {
                     </tbody>
                   </table>
                 </div>
-              )}
-
-              {titulo === "Terminados y cobrados" && (
-                <>
-                  <div className="text-white mt-4">
-                    <h3>Terminados</h3>
-                    <table className="min-w-full table-auto border-collapse border border-gray-600">
-                      <thead>
-                        <tr>
-                          <th className="px-4 py-2 border border-gray-600">Total UF Neto</th>
-                          <th className="px-4 py-2 border border-gray-600">Total CLP</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td className="px-4 py-2 border border-gray-600">{totalUFNetoTerminadosCobrados}</td>
-                          <td className="px-4 py-2 border border-gray-600">{formatCurrency(totalCLPTerminadosCobrados)}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="text-white mt-4">
-                    <h3>Eliminados</h3>
-                    <table className="min-w-full table-auto border-collapse border border-gray-600">
-                      <thead>
-                        <tr>
-                          <th className="px-4 py-2 border border-gray-600">Total UF Neto</th>
-                          <th className="px-4 py-2 border border-gray-600">Total CLP</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td className="px-4 py-2 border border-gray-600">{totalUFNetoEliminadosCobrados}</td>
-                          <td className="px-4 py-2 border border-gray-600">{formatCurrency(totalCLPEliminadosCobrados)}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </>
               )}
             </div>
           )}

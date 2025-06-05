@@ -66,9 +66,9 @@ export default function EditGestionModal({ isOpen, onClose, gestion, tipoCategor
         "Facturado",
       ]
     : [
+        "Iniciado",
         "Búsqueda",
         "Negociación",
-        "I.Barrido",
         "Aprobado CP y ATP",
         "Carpeta legal",
         "Fiscalía",
