@@ -1,7 +1,7 @@
 'use client'; // Marca este archivo como un componente del lado del cliente
 
 import { useState, useEffect, useCallback } from "react";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where, onSnapshot } from "firebase/firestore";
 import { db, auth } from "@/firebase.config";
 import NavBar from "@/components/NavBar";
 import BuscadorGestiones from "@/components/BuscadorGestiones"; // Importamos el buscador
@@ -24,8 +24,8 @@ export default function ListaGestionesPage() {
   };
 
   useEffect(() => {
-    const fetchGestiones = async () => {
-      const querySnapshot = await getDocs(collection(db, "Gestiones"));
+    // Suscripción en tiempo real a la colección de gestiones
+    const unsubscribe = onSnapshot(collection(db, "Gestiones"), async (querySnapshot) => {
       const gestionesData = await Promise.all(querySnapshot.docs.map(async (doc) => {
         const gestion = { id: doc.id, ...doc.data() };
         gestion.numeroFactura = await obtenerNumeroFactura(gestion.codigoSitio, gestion.numeroOC);
@@ -33,11 +33,10 @@ export default function ListaGestionesPage() {
         return gestion;
       }));
       setGestiones(gestionesData);
-      setFilteredGestiones(gestionesData); // Inicialmente, las gestiones filtradas son las mismas que las gestiones
-    };
-
-    fetchGestiones();
-  }, []); // Agregar un arreglo de dependencias vacío para que se ejecute solo una vez al montar el componente
+      setFilteredGestiones(gestionesData); // Actualiza también el filtrado
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {

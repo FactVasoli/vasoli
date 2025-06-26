@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import EditGestionModal from "./EditGestionModal";
-import { updateDoc, doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { updateDoc, doc, getDoc, collection, query, where, getDocs, deleteDoc } from "firebase/firestore";
 import { db, auth } from "@/firebase.config";
 import FacturarModal from "./FacturarModal";
 import AddObservacion from "./AddObservacion";
@@ -27,6 +27,7 @@ export default function ListaGestiones({ titulo, gestiones, tipoCategoria }) {
   const [viewFacturasOpen, setViewFacturasOpen] = useState(false);
   const [facturas, setFacturas] = useState([]);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [ocultarEliminadas, setOcultarEliminadas] = useState(true);
 
   const estadosGestionNormal = [
     "Iniciado",
@@ -320,10 +321,30 @@ export default function ListaGestiones({ titulo, gestiones, tipoCategoria }) {
     setIsMinimized(prev => !prev);
   };
 
+  // Función para eliminar definitivamente una gestión
+  const handleEliminarDefinitivo = async (gestion) => {
+    if (window.confirm("¿Estás seguro de que quieres eliminar esta gestión de forma permanente? Esta acción no se puede deshacer.")) {
+      await deleteDoc(doc(db, "Gestiones", gestion.id));
+    }
+  };
+
   return (
     <div className="bg-gray-800 p-6 rounded-lg mb-8">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-white">{titulo}</h2>
+        <div className="flex items-center">
+          <h2 className="text-xl font-semibold text-white">{titulo}</h2>
+        </div>
+          {titulo === "Terminados y cobrados" && (
+            <label className="flex items-center mr-4 text-white">
+              <input
+                type="checkbox"
+                checked={ocultarEliminadas}
+                onChange={e => setOcultarEliminadas(e.target.checked)}
+                className="mr-2"
+              />
+              Ocultar gestiones eliminadas
+            </label>
+          )}
         <button
           onClick={toggleMinimize}
         >
@@ -380,10 +401,20 @@ export default function ListaGestiones({ titulo, gestiones, tipoCategoria }) {
                     </th>
                   )}
                   <th className="px-4 py-2 border border-gray-600" style={{ width: '50px' }}>Acciones</th>
+                  {(titulo === "Eliminados sin cobrar" || titulo === "Terminados y cobrados") && (
+                    <th className="px-4 py-2 border border-gray-600" style={{ width: '70px' }}>Eliminar</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
-                {sortedGestiones.map((gestion, index) => (
+                {sortedGestiones
+                  .filter(gestion => {
+                    if (titulo === "Terminados y cobrados" && ocultarEliminadas) {
+                      return gestion.estadoOC !== "Eliminado y cobrado" && gestion.estadoOC !== "Eliminado no facturado";
+                    }
+                    return true;
+                  })
+                  .map((gestion, index) => (
                   <tr 
                     key={gestion.id} 
                     className={`border-t border-gray-600 cursor-pointer hover:bg-gray-700 ${gestion.estadoOC === "Eliminado y cobrado" ? 'bg-red-900 hover:bg-red-800' : ''}`} 
@@ -572,6 +603,21 @@ export default function ListaGestiones({ titulo, gestiones, tipoCategoria }) {
                         </div>
                       )}
                     </td>
+                    {(titulo === "Eliminados sin cobrar" || titulo === "Terminados y cobrados") && (
+                      <td className="px-4 py-2 border border-gray-600">
+                        {(gestion.estadoOC === "Eliminado y cobrado" || gestion.estadoOC === "Eliminado no facturado") && (
+                          <button
+                            onClick={e => {
+                              e.stopPropagation();
+                              handleEliminarDefinitivo(gestion);
+                            }}
+                            className="text-red-500 hover:text-red-700 font-bold"
+                          >
+                            Eliminar
+                          </button>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

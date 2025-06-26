@@ -7,7 +7,7 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import { db, auth } from "@/firebase.config";
 import { doc, getDoc } from "firebase/firestore";
 
-export default function ListadorGestiones2({ gestiones }) {
+export default function ListadorGestiones2({ gestiones, modoOCPendientes = false }) {
     const [sortConfig, setSortConfig] = useState({ key: 'categoria', direction: 'asc' });
     const [isEditModalOpen, setEditModalOpen] = useState(false);
     const [selectedGestion, setSelectedGestion] = useState(null);
@@ -117,19 +117,44 @@ export default function ListadorGestiones2({ gestiones }) {
         setViewFacturasOpen(true);
     };
 
+    const copiarAlPortapapeles = () => {
+        const header = "Código Sitio || Nombre Sitio || Estado || Categoría";
+        const rows = gestiones.map(gestion => 
+            `${gestion.codigoSitio || 'N/A'} || ${gestion.nombreSitio || 'N/A'} || ${gestion.estadoOC || 'N/A'} || ${gestion.categoria || 'N/A'}`
+        );
+        const texto = [header, ...rows].join('\n');
+        
+        navigator.clipboard.writeText(texto).then(() => {
+            alert('Datos copiados al portapapeles');
+        }).catch(err => {
+            console.error('Error al copiar al portapapeles:', err);
+            alert('Error al copiar al portapapeles');
+        });
+    };
+
     return (
         <div>
             <div className="w-full px-4 py-8 overflow-x-auto">
                 <div className="flex items-center mb-4">
-                    <div className="bg-gray-700 text-white px-4 py-2 rounded mr-4">
-                        Valor UF hoy: {valorUfHoy ? valorUfHoy : "Cargando..."}
-                    </div>
-                    {isAdmin && (
+                    {!modoOCPendientes && (
+                        <div className="bg-gray-700 text-white px-4 py-2 rounded mr-4">
+                            Valor UF hoy: {valorUfHoy ? valorUfHoy : "Cargando..."}
+                        </div>
+                    )}
+                    {isAdmin && !modoOCPendientes && (
                         <button
                             onClick={() => setShowDetails(!showDetails)}
                             className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
                         >
                             {showDetails ? "Ocultar detalles" : "Mostrar más detalles"}
+                        </button>
+                    )}
+                    {modoOCPendientes && (
+                        <button
+                            onClick={copiarAlPortapapeles}
+                            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors ml-4"
+                        >
+                            Copiar al portapapeles
                         </button>
                     )}
                 </div>
@@ -164,15 +189,17 @@ export default function ListadorGestiones2({ gestiones }) {
                                     {sortConfig.key === 'nombreSitio' ? (sortConfig.direction === 'asc' ? ' ↑' : ' ↓') : ' ←'}
                                 </span>
                             </th>
-                            <th
-                                className="px-4 py-2 border border-gray-600 bg-gray-700"
-                                onClick={() => requestSort('numeroOC')}
-                            >
-                                <span className="hover:text-green-500 transition-colors duration-200">
-                                    N° OC
-                                    {sortConfig.key === 'numeroOC' ? (sortConfig.direction === 'asc' ? ' ↑' : ' ↓') : ' ←'}
-                                </span>
-                            </th>
+                            {!modoOCPendientes && (
+                                <th
+                                    className="px-4 py-2 border border-gray-600 bg-gray-700"
+                                    onClick={() => requestSort('numeroOC')}
+                                >
+                                    <span className="hover:text-green-500 transition-colors duration-200">
+                                        N° OC
+                                        {sortConfig.key === 'numeroOC' ? (sortConfig.direction === 'asc' ? ' ↑' : ' ↓') : ' ←'}
+                                    </span>
+                                </th>
+                            )}
                             <th
                                 className="px-4 py-2 border border-gray-600 bg-gray-700"
                                 onClick={() => requestSort('fechaAsignacion')}
@@ -201,16 +228,18 @@ export default function ListadorGestiones2({ gestiones }) {
                                     {sortConfig.key === 'categoria' ? (sortConfig.direction === 'asc' ? ' ↑' : ' ↓') : ' ←'}
                                 </span>
                             </th>
-                            <th
-                                className="px-4 py-2 border border-gray-600 bg-gray-700"
-                                onClick={() => requestSort('numeroFactura')}
-                            >
-                                <span className="hover:text-green-500 transition-colors duration-200">
-                                    N° Factura
-                                    {sortConfig.key === 'numeroFactura' ? (sortConfig.direction === 'asc' ? ' ↑' : ' ↓') : ' ←'}
-                                </span>
-                            </th>
-                            {showDetails && (
+                            {!modoOCPendientes && (
+                                <th
+                                    className="px-4 py-2 border border-gray-600 bg-gray-700"
+                                    onClick={() => requestSort('numeroFactura')}
+                                >
+                                    <span className="hover:text-green-500 transition-colors duration-200">
+                                        N° Factura
+                                        {sortConfig.key === 'numeroFactura' ? (sortConfig.direction === 'asc' ? ' ↑' : ' ↓') : ' ←'}
+                                    </span>
+                                </th>
+                            )}
+                            {showDetails && !modoOCPendientes && (
                                 <th
                                     className="px-4 py-2 border border-gray-600 bg-gray-700"
                                     onClick={() => requestSort('fechaFacturacion')}
@@ -221,39 +250,32 @@ export default function ListadorGestiones2({ gestiones }) {
                                     </span>
                                 </th>
                             )}
-                            <th
-                                className="px-4 py-2 border border-gray-600 bg-gray-700"
-                                onClick={() => requestSort('valorNetoUF')}
-                            >
-                                <span className="hover:text-green-500 transition-colors duration-200">
-                                    Valor Neto UF
-                                    {sortConfig.key === 'valorNetoUF' ? (sortConfig.direction === 'asc' ? ' ↑' : ' ↓') : ' ←'}
-                                </span>
-                            </th>
-                            {showDetails && (
+                            {!modoOCPendientes && (
+                                <th
+                                    className="px-4 py-2 border border-gray-600 bg-gray-700"
+                                    onClick={() => requestSort('valorNetoUF')}
+                                >
+                                    <span className="hover:text-green-500 transition-colors duration-200">
+                                        Valor Neto UF
+                                        {sortConfig.key === 'valorNetoUF' ? (sortConfig.direction === 'asc' ? ' ↑' : ' ↓') : ' ←'}
+                                    </span>
+                                </th>
+                            )}
+                            {showDetails && !modoOCPendientes && (
                                 <>
-                                    <th
-                                        className="px-4 py-2 border border-gray-600 bg-gray-700"
-                                        onClick={() => requestSort('valorUfFecha')}
-                                    >
+                                    <th className="px-4 py-2 border border-gray-600 bg-gray-700" onClick={() => requestSort('valorUfFecha')}>
                                         <span className="hover:text-green-500 transition-colors duration-200">
                                             Valor UF en fecha
                                             {sortConfig.key === 'valorUfFecha' ? (sortConfig.direction === 'asc' ? ' ↑' : ' ↓') : ' ←'}
                                         </span>
                                     </th>
-                                    <th
-                                        className="px-4 py-2 border border-gray-600 bg-gray-700"
-                                        onClick={() => requestSort('totalUf')}
-                                    >
+                                    <th className="px-4 py-2 border border-gray-600 bg-gray-700" onClick={() => requestSort('totalUf')}>
                                         <span className="hover:text-green-500 transition-colors duration-200">
                                             Total UF
                                             {sortConfig.key === 'totalUf' ? (sortConfig.direction === 'asc' ? ' ↑' : ' ↓') : ' ←'}
                                         </span>
                                     </th>
-                                    <th
-                                        className="px-4 py-2 border border-gray-600 bg-gray-700"
-                                        onClick={() => requestSort('totalClp')}
-                                    >
+                                    <th className="px-4 py-2 border border-gray-600 bg-gray-700" onClick={() => requestSort('totalClp')}>
                                         <span className="hover:text-green-500 transition-colors duration-200">
                                             Total CLP
                                             {sortConfig.key === 'totalClp' ? (sortConfig.direction === 'asc' ? ' ↑' : ' ↓') : ' ←'}
@@ -273,21 +295,25 @@ export default function ListadorGestiones2({ gestiones }) {
                                 <td className="px-4 py-2 border border-gray-600">{gestion.cliente}</td>
                                 <td className="px-4 py-2 border border-gray-600">{gestion.codigoSitio}</td>
                                 <td className="px-4 py-2 border border-gray-600">{gestion.nombreSitio}</td>
-                                <td className="px-4 py-2 border border-gray-600">{gestion.numeroOC}</td>
+                                {!modoOCPendientes && (
+                                    <td className="px-4 py-2 border border-gray-600">{gestion.numeroOC}</td>
+                                )}
                                 <td className="px-4 py-2 border border-gray-600">{gestion.fechaAsignacion}</td>
                                 <td className="px-4 py-2 border border-gray-600">{gestion.estadoOC}</td>
                                 <td className="px-4 py-2 border border-gray-600">{gestion.estadoGestion}</td>
                                 <td className="px-4 py-2 border border-gray-600">{gestion.categoria}</td>
-                                <td
-                                    className="px-4 py-2 border border-gray-600 cursor-pointer hover:bg-gray-600"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleViewFacturas(gestion);
-                                    }}
-                                >
-                                    {gestion.numeroFactura}
-                                </td>
-                                {showDetails && (
+                                {!modoOCPendientes && (
+                                    <td
+                                        className="px-4 py-2 border border-gray-600 cursor-pointer hover:bg-gray-600"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleViewFacturas(gestion);
+                                        }}
+                                    >
+                                        {gestion.numeroFactura}
+                                    </td>
+                                )}
+                                {showDetails && !modoOCPendientes && (
                                     <td className="px-4 py-2 border border-gray-600">
                                         {gestion.fechasFacturacion && gestion.fechasFacturacion.length > 0 ? (
                                             gestion.fechasFacturacion.map((fecha, index) => (
@@ -303,8 +329,10 @@ export default function ListadorGestiones2({ gestiones }) {
                                         )}
                                     </td>
                                 )}
-                                <td className="px-4 py-2 border border-gray-600">{gestion.valorNetoUF}</td>
-                                {showDetails && (
+                                {!modoOCPendientes && (
+                                    <td className="px-4 py-2 border border-gray-600">{gestion.valorNetoUF}</td>
+                                )}
+                                {showDetails && !modoOCPendientes && (
                                     <>
                                         <td className="px-4 py-2 border border-gray-600">
                                             {gestion.fechasFacturacion && gestion.fechasFacturacion.length > 0 ? gestion.fechasFacturacion[0].valorUf : ""}
